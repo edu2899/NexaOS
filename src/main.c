@@ -1,5 +1,6 @@
 #include "db.h"
 #include "clientes.h"
+#include "equipamentos.h"
 #include "util.h"
 
 #include <stdio.h>
@@ -45,6 +46,8 @@ static void executar_menu_principal(sqlite3 *db)
                 menu_clientes(db);
                 break;
             case 2:
+                menu_equipamentos(db);
+                break;
             case 3:
             case 4:
             case 5:

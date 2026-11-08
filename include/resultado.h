@@ -1,0 +1,14 @@
+#ifndef RESULTADO_H
+#define RESULTADO_H
+
+typedef enum Resultado {
+    RES_OK = 0,
+    RES_ERRO_BANCO,
+    RES_DUPLICADO,
+    RES_NAO_ENCONTRADO,
+    RES_INVALIDO,
+    RES_ERRO_MEMORIA,
+    RES_ERRO_ARQUIVO
+} Resultado;
+
+#endif

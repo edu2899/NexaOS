@@ -1,4 +1,5 @@
 #include "db.h"
+#include "clientes.h"
 #include "util.h"
 
 #include <stdio.h>
@@ -21,7 +22,7 @@ static void exibir_menu_principal(void)
     printf("0 - Sair\n\n");
 }
 
-static void executar_menu_principal(void)
+static void executar_menu_principal(sqlite3 *db)
 {
     int opcao;
     Resultado resultado;
@@ -41,6 +42,8 @@ static void executar_menu_principal(void)
             case 0:
                 return;
             case 1:
+                menu_clientes(db);
+                break;
             case 2:
             case 3:
             case 4:
@@ -73,7 +76,7 @@ int main(void)
 
     printf("NexaOS iniciado - SQLite %s\n", sqlite3_libversion());
     printf("Banco de dados pronto.\n");
-    executar_menu_principal();
+    executar_menu_principal(db);
     db_fechar(db);
     return 0;
 }

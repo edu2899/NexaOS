@@ -250,6 +250,53 @@ int util_validar_email(const char *email)
     return ponto != NULL && ponto != arroba + 1 && ponto[1] != '\0';
 }
 
+void *util_dobrar_capacidade(void *vetor, size_t *capacidade,
+                             size_t tamanho_item)
+{
+    size_t nova_capacidade;
+    void *temporario;
+
+    if (capacidade == NULL || *capacidade == 0 || tamanho_item == 0 ||
+        *capacidade > (size_t)-1 / 2) {
+        return NULL;
+    }
+    nova_capacidade = *capacidade * 2;
+    if (nova_capacidade > (size_t)-1 / tamanho_item) {
+        return NULL;
+    }
+
+    temporario = realloc(vetor, nova_capacidade * tamanho_item);
+    if (temporario == NULL) {
+        return NULL;
+    }
+    *capacidade = nova_capacidade;
+    return temporario;
+}
+
+void util_imprimir_coluna(const char *texto, int largura)
+{
+    const unsigned char *inicio = (const unsigned char *)
+        (texto != NULL ? texto : "");
+    const unsigned char *cursor = inicio;
+    int caracteres = 0;
+
+    while (*cursor != '\0' && caracteres < largura) {
+        cursor++;
+        while ((*cursor & 0xC0) == 0x80) {
+            cursor++;
+        }
+        caracteres++;
+    }
+    if (caracteres > 0) {
+        fwrite(inicio, 1, (size_t)(cursor - inicio), stdout);
+    }
+    while (caracteres < largura) {
+        putchar(' ');
+        caracteres++;
+    }
+    putchar(' ');
+}
+
 void util_titulo(const char *titulo)
 {
     printf("========== %s ==========\n", titulo != NULL ? titulo : "");

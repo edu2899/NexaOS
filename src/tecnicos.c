@@ -7,31 +7,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void tecnico_copiar_coluna(char *destino, size_t tamanho,
-                                  sqlite3_stmt *consulta, int coluna)
-{
-    const unsigned char *texto = sqlite3_column_text(consulta, coluna);
-
-    snprintf(destino, tamanho, "%s", texto != NULL ? (const char *)texto : "");
-}
-
 static void tecnico_ler_colunas(sqlite3_stmt *consulta, Tecnico *tecnico)
 {
     tecnico->id = sqlite3_column_int(consulta, 0);
-    tecnico_copiar_coluna(tecnico->nome, sizeof(tecnico->nome), consulta, 1);
-    tecnico_copiar_coluna(tecnico->especialidade,
-                          sizeof(tecnico->especialidade), consulta, 2);
-}
-
-static Resultado tecnico_finalizar(sqlite3 *db, sqlite3_stmt *consulta,
-                                   Resultado resultado)
-{
-    int codigo = sqlite3_finalize(consulta);
-
-    if (codigo != SQLITE_OK && resultado == RES_OK) {
-        return db_traduzir_erro(db);
-    }
-    return resultado;
+    db_copiar_coluna(tecnico->nome, sizeof(tecnico->nome), consulta, 1);
+    db_copiar_coluna(tecnico->especialidade, sizeof(tecnico->especialidade),
+                     consulta, 2);
 }
 
 Resultado tecnico_validar(const Tecnico *tecnico)
@@ -58,21 +39,19 @@ Resultado tecnico_inserir(sqlite3 *db, const Tecnico *tecnico, int *id_novo)
         return db_traduzir_erro(db);
     }
 
-    codigo = sqlite3_bind_text(consulta, 1, tecnico->nome, -1,
-                               SQLITE_TRANSIENT);
+    codigo = db_vincular_texto(consulta, 1, tecnico->nome, 0);
     if (codigo == SQLITE_OK) {
-        codigo = sqlite3_bind_text(consulta, 2, tecnico->especialidade, -1,
-                                   SQLITE_TRANSIENT);
+        codigo = db_vincular_texto(consulta, 2, tecnico->especialidade, 0);
     }
     if (codigo == SQLITE_OK) {
         codigo = sqlite3_step(consulta);
     }
     if (codigo != SQLITE_DONE) {
-        return tecnico_finalizar(db, consulta, db_traduzir_erro(db));
+        return db_finalizar(db, consulta, db_traduzir_erro(db));
     }
 
     *id_novo = (int)sqlite3_last_insert_rowid(db);
-    return tecnico_finalizar(db, consulta, RES_OK);
+    return db_finalizar(db, consulta, RES_OK);
 }
 
 Resultado tecnico_buscar_por_id(sqlite3 *db, int id, Tecnico *saida)
@@ -94,12 +73,12 @@ Resultado tecnico_buscar_por_id(sqlite3 *db, int id, Tecnico *saida)
     }
     if (codigo == SQLITE_ROW) {
         tecnico_ler_colunas(consulta, saida);
-        return tecnico_finalizar(db, consulta, RES_OK);
+        return db_finalizar(db, consulta, RES_OK);
     }
     if (codigo == SQLITE_DONE) {
-        return tecnico_finalizar(db, consulta, RES_NAO_ENCONTRADO);
+        return db_finalizar(db, consulta, RES_NAO_ENCONTRADO);
     }
-    return tecnico_finalizar(db, consulta, db_traduzir_erro(db));
+    return db_finalizar(db, consulta, db_traduzir_erro(db));
 }
 
 static Resultado tecnico_adicionar_linha(sqlite3_stmt *consulta,
@@ -107,27 +86,39 @@ static Resultado tecnico_adicionar_linha(sqlite3_stmt *consulta,
                                          size_t *capacidade, int quantidade)
 {
     if ((size_t)quantidade == *capacidade) {
-        size_t nova_capacidade;
-        Tecnico *temporario;
-
-        if (*capacidade > (size_t)-1 / 2 ||
-            *capacidade > (size_t)INT_MAX / 2) {
-            return RES_ERRO_MEMORIA;
-        }
-        nova_capacidade = *capacidade * 2;
-        if (nova_capacidade > (size_t)-1 / sizeof(**tecnicos)) {
-            return RES_ERRO_MEMORIA;
-        }
-        temporario = realloc(*tecnicos, nova_capacidade * sizeof(**tecnicos));
+        Tecnico *temporario = util_dobrar_capacidade(
+            *tecnicos, capacidade, sizeof(**tecnicos));
         if (temporario == NULL) {
             return RES_ERRO_MEMORIA;
         }
         *tecnicos = temporario;
-        *capacidade = nova_capacidade;
     }
 
     tecnico_ler_colunas(consulta, &(*tecnicos)[quantidade]);
     return RES_OK;
+}
+
+static Resultado tecnico_carregar_linhas(sqlite3 *db, sqlite3_stmt *consulta,
+                                         Tecnico **tecnicos,
+                                         size_t *capacidade, int *total)
+{
+    int codigo;
+
+    *total = 0;
+    while ((codigo = sqlite3_step(consulta)) == SQLITE_ROW) {
+        if (*total == INT_MAX) {
+            return RES_ERRO_MEMORIA;
+        }
+        {
+            Resultado resultado = tecnico_adicionar_linha(
+                consulta, tecnicos, capacidade, *total);
+            if (resultado != RES_OK) {
+                return resultado;
+            }
+        }
+        (*total)++;
+    }
+    return codigo == SQLITE_DONE ? RES_OK : db_traduzir_erro(db);
 }
 
 Resultado tecnico_listar(sqlite3 *db, Tecnico **lista, int *quantidade)
@@ -138,8 +129,7 @@ Resultado tecnico_listar(sqlite3 *db, Tecnico **lista, int *quantidade)
     Tecnico *tecnicos;
     size_t capacidade = 8;
     int total = 0;
-    int codigo;
-    Resultado resultado = RES_OK;
+    Resultado resultado;
 
     if (db == NULL || lista == NULL || quantidade == NULL) {
         return RES_INVALIDO;
@@ -155,22 +145,9 @@ Resultado tecnico_listar(sqlite3 *db, Tecnico **lista, int *quantidade)
         return db_traduzir_erro(db);
     }
 
-    while ((codigo = sqlite3_step(consulta)) == SQLITE_ROW) {
-        if (total == INT_MAX) {
-            resultado = RES_ERRO_MEMORIA;
-            break;
-        }
-        resultado = tecnico_adicionar_linha(consulta, &tecnicos, &capacidade,
-                                            total);
-        if (resultado != RES_OK) {
-            break;
-        }
-        total++;
-    }
-    if (codigo != SQLITE_DONE && resultado == RES_OK) {
-        resultado = db_traduzir_erro(db);
-    }
-    resultado = tecnico_finalizar(db, consulta, resultado);
+    resultado = tecnico_carregar_linhas(db, consulta, &tecnicos, &capacidade,
+                                        &total);
+    resultado = db_finalizar(db, consulta, resultado);
     if (resultado != RES_OK) {
         free(tecnicos);
         return resultado;
@@ -225,6 +202,7 @@ static void tecnico_listar_tela(sqlite3 *db)
     Tecnico *lista = NULL;
     int quantidade = 0;
     int i;
+    char id[16];
     Resultado resultado = tecnico_listar(db, &lista, &quantidade);
 
     if (resultado != RES_OK) {
@@ -232,10 +210,16 @@ static void tecnico_listar_tela(sqlite3 *db)
     } else if (quantidade == 0) {
         puts("Nenhum técnico cadastrado.");
     } else {
-        printf("%-6s %-30s %-30s\n", "ID", "Nome", "Especialidade");
+        util_imprimir_coluna("ID", 6);
+        util_imprimir_coluna("Nome", 30);
+        util_imprimir_coluna("Especialidade", 30);
+        putchar('\n');
         for (i = 0; i < quantidade; i++) {
-            printf("%-6d %-30.30s %-30.30s\n", lista[i].id, lista[i].nome,
-                   lista[i].especialidade);
+            snprintf(id, sizeof(id), "%d", lista[i].id);
+            util_imprimir_coluna(id, 6);
+            util_imprimir_coluna(lista[i].nome, 30);
+            util_imprimir_coluna(lista[i].especialidade, 30);
+            putchar('\n');
         }
     }
     free(lista);

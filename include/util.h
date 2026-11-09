@@ -16,6 +16,9 @@ void util_somente_digitos(const char *origem, char *destino, size_t tamanho);
 int util_validar_documento(const char *digitos);
 int util_validar_telefone(const char *digitos);
 int util_validar_email(const char *email);
+void *util_dobrar_capacidade(void *vetor, size_t *capacidade,
+                             size_t tamanho_item);
+void util_imprimir_coluna(const char *texto, int largura);
 void util_titulo(const char *titulo);
 void util_sucesso(const char *mensagem);
 void util_erro(const char *mensagem);

@@ -7,48 +7,36 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void cliente_copiar_coluna(char *destino, size_t tamanho,
-                                  sqlite3_stmt *consulta, int coluna)
+static int cliente_vincular_campos(sqlite3_stmt *consulta, const Cliente *c)
 {
-    const unsigned char *texto = sqlite3_column_text(consulta, coluna);
+    int codigo = db_vincular_texto(consulta, 1, c->nome, 0);
 
-    snprintf(destino, tamanho, "%s", texto != NULL ? (const char *)texto : "");
-}
-
-static Resultado cliente_resultado_finalizar(sqlite3 *db,
-                                             sqlite3_stmt *consulta,
-                                             Resultado resultado)
-{
-    int codigo = sqlite3_finalize(consulta);
-
-    if (codigo != SQLITE_OK && resultado == RES_OK) {
-        return db_traduzir_erro(db);
+    if (codigo == SQLITE_OK) {
+        codigo = db_vincular_texto(consulta, 2, c->documento, 0);
     }
-    return resultado;
-}
-
-static int cliente_vincular_texto(sqlite3_stmt *consulta, int indice,
-                                  const char *texto, int opcional)
-{
-    if (opcional && texto[0] == '\0') {
-        return sqlite3_bind_null(consulta, indice);
+    if (codigo == SQLITE_OK) {
+        codigo = db_vincular_texto(consulta, 3, c->telefone, 0);
     }
-    return sqlite3_bind_text(consulta, indice, texto, -1, SQLITE_TRANSIENT);
+    if (codigo == SQLITE_OK) {
+        codigo = db_vincular_texto(consulta, 4, c->email, 1);
+    }
+    if (codigo == SQLITE_OK) {
+        codigo = db_vincular_texto(consulta, 5, c->endereco, 1);
+    }
+    return codigo;
 }
 
 static void cliente_ler_colunas(sqlite3_stmt *consulta, Cliente *cliente)
 {
     cliente->id = sqlite3_column_int(consulta, 0);
-    cliente_copiar_coluna(cliente->nome, sizeof(cliente->nome), consulta, 1);
-    cliente_copiar_coluna(cliente->documento, sizeof(cliente->documento),
-                          consulta, 2);
-    cliente_copiar_coluna(cliente->telefone, sizeof(cliente->telefone),
-                          consulta, 3);
-    cliente_copiar_coluna(cliente->email, sizeof(cliente->email), consulta, 4);
-    cliente_copiar_coluna(cliente->endereco, sizeof(cliente->endereco),
-                          consulta, 5);
-    cliente_copiar_coluna(cliente->data_cadastro,
-                          sizeof(cliente->data_cadastro), consulta, 6);
+    db_copiar_coluna(cliente->nome, sizeof(cliente->nome), consulta, 1);
+    db_copiar_coluna(cliente->documento, sizeof(cliente->documento), consulta,
+                     2);
+    db_copiar_coluna(cliente->telefone, sizeof(cliente->telefone), consulta, 3);
+    db_copiar_coluna(cliente->email, sizeof(cliente->email), consulta, 4);
+    db_copiar_coluna(cliente->endereco, sizeof(cliente->endereco), consulta, 5);
+    db_copiar_coluna(cliente->data_cadastro, sizeof(cliente->data_cadastro),
+                     consulta, 6);
 }
 
 Resultado cliente_validar(const Cliente *cliente)
@@ -79,32 +67,18 @@ Resultado cliente_inserir(sqlite3 *db, const Cliente *cliente, int *id_novo)
         return db_traduzir_erro(db);
     }
 
-    codigo = sqlite3_bind_text(consulta, 1, cliente->nome, -1, SQLITE_TRANSIENT);
-    if (codigo == SQLITE_OK) {
-        codigo = sqlite3_bind_text(consulta, 2, cliente->documento, -1,
-                                   SQLITE_TRANSIENT);
-    }
-    if (codigo == SQLITE_OK) {
-        codigo = sqlite3_bind_text(consulta, 3, cliente->telefone, -1,
-                                   SQLITE_TRANSIENT);
-    }
-    if (codigo == SQLITE_OK) {
-        codigo = cliente_vincular_texto(consulta, 4, cliente->email, 1);
-    }
-    if (codigo == SQLITE_OK) {
-        codigo = cliente_vincular_texto(consulta, 5, cliente->endereco, 1);
-    }
+    codigo = cliente_vincular_campos(consulta, cliente);
     if (codigo == SQLITE_OK) {
         codigo = sqlite3_step(consulta);
     }
 
     if (codigo != SQLITE_DONE) {
         resultado = db_traduzir_erro(db);
-        return cliente_resultado_finalizar(db, consulta, resultado);
+        return db_finalizar(db, consulta, resultado);
     }
 
     *id_novo = (int)sqlite3_last_insert_rowid(db);
-    return cliente_resultado_finalizar(db, consulta, RES_OK);
+    return db_finalizar(db, consulta, RES_OK);
 }
 
 Resultado cliente_buscar_por_id(sqlite3 *db, int id, Cliente *saida)
@@ -128,13 +102,13 @@ Resultado cliente_buscar_por_id(sqlite3 *db, int id, Cliente *saida)
     }
     if (codigo == SQLITE_ROW) {
         cliente_ler_colunas(consulta, saida);
-        return cliente_resultado_finalizar(db, consulta, RES_OK);
+        return db_finalizar(db, consulta, RES_OK);
     }
 
     if (codigo == SQLITE_DONE) {
-        return cliente_resultado_finalizar(db, consulta, RES_NAO_ENCONTRADO);
+        return db_finalizar(db, consulta, RES_NAO_ENCONTRADO);
     }
-    return cliente_resultado_finalizar(db, consulta, db_traduzir_erro(db));
+    return db_finalizar(db, consulta, db_traduzir_erro(db));
 }
 
 Resultado cliente_atualizar(sqlite3 *db, const Cliente *cliente)
@@ -154,21 +128,7 @@ Resultado cliente_atualizar(sqlite3 *db, const Cliente *cliente)
         return db_traduzir_erro(db);
     }
 
-    codigo = sqlite3_bind_text(consulta, 1, cliente->nome, -1, SQLITE_TRANSIENT);
-    if (codigo == SQLITE_OK) {
-        codigo = sqlite3_bind_text(consulta, 2, cliente->documento, -1,
-                                   SQLITE_TRANSIENT);
-    }
-    if (codigo == SQLITE_OK) {
-        codigo = sqlite3_bind_text(consulta, 3, cliente->telefone, -1,
-                                   SQLITE_TRANSIENT);
-    }
-    if (codigo == SQLITE_OK) {
-        codigo = cliente_vincular_texto(consulta, 4, cliente->email, 1);
-    }
-    if (codigo == SQLITE_OK) {
-        codigo = cliente_vincular_texto(consulta, 5, cliente->endereco, 1);
-    }
+    codigo = cliente_vincular_campos(consulta, cliente);
     if (codigo == SQLITE_OK) {
         codigo = sqlite3_bind_int(consulta, 6, cliente->id);
     }
@@ -183,7 +143,44 @@ Resultado cliente_atualizar(sqlite3 *db, const Cliente *cliente)
     } else {
         resultado = RES_OK;
     }
-    return cliente_resultado_finalizar(db, consulta, resultado);
+    return db_finalizar(db, consulta, resultado);
+}
+
+static Resultado cliente_carregar_linhas(sqlite3 *db, sqlite3_stmt *consulta,
+                                         Cliente **clientes,
+                                         size_t *capacidade, int *total)
+{
+    int codigo;
+
+    *total = 0;
+    while ((codigo = sqlite3_step(consulta)) == SQLITE_ROW) {
+        if (*total == INT_MAX) {
+            return RES_ERRO_MEMORIA;
+        }
+        if ((size_t)*total == *capacidade) {
+            Cliente *temporario = util_dobrar_capacidade(
+                *clientes, capacidade, sizeof(**clientes));
+            if (temporario == NULL) {
+                return RES_ERRO_MEMORIA;
+            }
+            *clientes = temporario;
+        }
+        cliente_ler_colunas(consulta, &(*clientes)[*total]);
+        (*total)++;
+    }
+    return codigo == SQLITE_DONE ? RES_OK : db_traduzir_erro(db);
+}
+
+static Resultado cliente_publicar_lista(Cliente *clientes, int total,
+                                        Cliente **lista, int *quantidade)
+{
+    if (total == 0) {
+        free(clientes);
+        return RES_OK;
+    }
+    *lista = clientes;
+    *quantidade = total;
+    return RES_OK;
 }
 
 Resultado cliente_listar(sqlite3 *db, Cliente **lista, int *quantidade)
@@ -195,8 +192,7 @@ Resultado cliente_listar(sqlite3 *db, Cliente **lista, int *quantidade)
     Cliente *clientes;
     size_t capacidade = 8;
     int total = 0;
-    int codigo;
-    Resultado resultado = RES_OK;
+    Resultado resultado;
 
     if (db == NULL || lista == NULL || quantidade == NULL) {
         return RES_INVALIDO;
@@ -213,54 +209,14 @@ Resultado cliente_listar(sqlite3 *db, Cliente **lista, int *quantidade)
         return db_traduzir_erro(db);
     }
 
-    while ((codigo = sqlite3_step(consulta)) == SQLITE_ROW) {
-        if ((size_t)total == capacidade) {
-            size_t nova_capacidade;
-            Cliente *temporario;
-
-            if (capacidade > (size_t)-1 / 2 ||
-                capacidade > (size_t)INT_MAX / 2) {
-                resultado = RES_ERRO_MEMORIA;
-                break;
-            }
-            nova_capacidade = capacidade * 2;
-            if (nova_capacidade > (size_t)-1 / sizeof(*clientes)) {
-                resultado = RES_ERRO_MEMORIA;
-                break;
-            }
-            temporario = realloc(clientes,
-                                 nova_capacidade * sizeof(*clientes));
-            if (temporario == NULL) {
-                resultado = RES_ERRO_MEMORIA;
-                break;
-            }
-            clientes = temporario;
-            capacidade = nova_capacidade;
-        }
-        if (total == INT_MAX) {
-            resultado = RES_ERRO_MEMORIA;
-            break;
-        }
-        cliente_ler_colunas(consulta, &clientes[total]);
-        total++;
-    }
-
-    if (codigo != SQLITE_DONE && resultado == RES_OK) {
-        resultado = db_traduzir_erro(db);
-    }
-    resultado = cliente_resultado_finalizar(db, consulta, resultado);
+    resultado = cliente_carregar_linhas(db, consulta, &clientes, &capacidade,
+                                        &total);
+    resultado = db_finalizar(db, consulta, resultado);
     if (resultado != RES_OK) {
         free(clientes);
         return resultado;
     }
-    if (total == 0) {
-        free(clientes);
-        return RES_OK;
-    }
-
-    *lista = clientes;
-    *quantidade = total;
-    return RES_OK;
+    return cliente_publicar_lista(clientes, total, lista, quantidade);
 }
 
 static void cliente_mostrar_dados(const Cliente *cliente)
@@ -302,8 +258,9 @@ static Resultado cliente_ler_documento(Cliente *cliente, int manter)
     Resultado resultado;
 
     for (;;) {
-        resultado = util_ler_linha("Documento (Enter mantém): ", texto,
-                                   sizeof(texto));
+        resultado = util_ler_linha(
+            manter ? "Documento (Enter mantém): " : "Documento: ",
+            texto, sizeof(texto));
         if (resultado != RES_OK) {
             return resultado;
         }
@@ -327,8 +284,9 @@ static Resultado cliente_ler_telefone(Cliente *cliente, int manter)
     Resultado resultado;
 
     for (;;) {
-        resultado = util_ler_linha("Telefone (Enter mantém): ", texto,
-                                   sizeof(texto));
+        resultado = util_ler_linha(
+            manter ? "Telefone (Enter mantém): " : "Telefone: ",
+            texto, sizeof(texto));
         if (resultado != RES_OK) {
             return resultado;
         }
@@ -351,8 +309,10 @@ static Resultado cliente_ler_email(Cliente *cliente, int manter)
     Resultado resultado;
 
     for (;;) {
-        resultado = util_ler_linha("Email (Enter mantém; - para vazio): ",
-                                   texto, sizeof(texto));
+        resultado = util_ler_linha(
+            manter ? "Email (Enter mantém; - para vazio): "
+                   : "Email (opcional, Enter para pular): ",
+            texto, sizeof(texto));
         if (resultado != RES_OK) {
             return resultado;
         }
@@ -375,7 +335,9 @@ static Resultado cliente_ler_endereco(Cliente *cliente, int manter)
 {
     char texto[sizeof(cliente->endereco)];
     Resultado resultado = util_ler_linha(
-        "Endereço (Enter mantém; - para vazio): ", texto, sizeof(texto));
+        manter ? "Endereço (Enter mantém; - para vazio): "
+               : "Endereço (opcional, Enter para pular): ",
+        texto, sizeof(texto));
 
     if (resultado != RES_OK) {
         return resultado;
@@ -393,8 +355,7 @@ static Resultado cliente_ler_endereco(Cliente *cliente, int manter)
 
 static int cliente_ler_id(int *id)
 {
-    Resultado resultado = util_ler_inteiro("ID do cliente: ", 1, 2147483647,
-                                            id);
+    Resultado resultado = util_ler_inteiro("ID do cliente: ", 1, INT_MAX, id);
 
     if (resultado == RES_ERRO_ARQUIVO) {
         return 0;
@@ -440,17 +401,25 @@ static void cliente_listar_tela(sqlite3 *db)
     int quantidade = 0;
     int i;
     Resultado resultado = cliente_listar(db, &lista, &quantidade);
+    char id[16];
 
     if (resultado != RES_OK) {
         util_erro(util_texto_resultado(resultado));
     } else if (quantidade == 0) {
         puts("Nenhum cliente cadastrado.");
     } else {
-        printf("%-6s %-30s %-14s %-11s\n", "ID", "Nome", "Documento",
-               "Telefone");
+        util_imprimir_coluna("ID", 6);
+        util_imprimir_coluna("Nome", 30);
+        util_imprimir_coluna("Documento", 14);
+        util_imprimir_coluna("Telefone", 11);
+        putchar('\n');
         for (i = 0; i < quantidade; i++) {
-            printf("%-6d %-30.30s %-14s %-11s\n", lista[i].id,
-                   lista[i].nome, lista[i].documento, lista[i].telefone);
+            snprintf(id, sizeof(id), "%d", lista[i].id);
+            util_imprimir_coluna(id, 6);
+            util_imprimir_coluna(lista[i].nome, 30);
+            util_imprimir_coluna(lista[i].documento, 14);
+            util_imprimir_coluna(lista[i].telefone, 11);
+            putchar('\n');
         }
     }
     free(lista);
@@ -473,6 +442,25 @@ static void cliente_consultar(sqlite3 *db)
     }
 }
 
+static Resultado cliente_ler_alteracoes(Cliente *cliente)
+{
+    Resultado resultado = cliente_ler_nome(cliente, 1);
+
+    if (resultado == RES_OK) {
+        resultado = cliente_ler_documento(cliente, 1);
+    }
+    if (resultado == RES_OK) {
+        resultado = cliente_ler_telefone(cliente, 1);
+    }
+    if (resultado == RES_OK) {
+        resultado = cliente_ler_email(cliente, 1);
+    }
+    if (resultado == RES_OK) {
+        resultado = cliente_ler_endereco(cliente, 1);
+    }
+    return resultado == RES_OK ? cliente_validar(cliente) : resultado;
+}
+
 static void cliente_atualizar_tela(sqlite3 *db)
 {
     Cliente cliente;
@@ -489,24 +477,7 @@ static void cliente_atualizar_tela(sqlite3 *db)
         return;
     }
     cliente_mostrar_dados(&cliente);
-    resultado = cliente_ler_nome(&cliente, 1);
-    if (resultado == RES_OK) {
-        resultado = cliente_ler_documento(&cliente, 1);
-    }
-    if (resultado == RES_OK) {
-        resultado = cliente_ler_telefone(&cliente, 1);
-    }
-    if (resultado == RES_OK) {
-        resultado = cliente_ler_email(&cliente, 1);
-    }
-    if (resultado == RES_OK) {
-        resultado = cliente_ler_endereco(&cliente, 1);
-    }
-    if (resultado != RES_OK) {
-        util_erro(util_texto_resultado(resultado));
-        return;
-    }
-    resultado = cliente_validar(&cliente);
+    resultado = cliente_ler_alteracoes(&cliente);
     if (resultado != RES_OK) {
         util_erro(util_texto_resultado(resultado));
         return;

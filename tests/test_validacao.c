@@ -2,6 +2,7 @@
 #include "util.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define ARQUIVO_ENTRADA "build\\test_validacao_input.txt"
@@ -94,11 +95,42 @@ static void testar_entrada(void)
                     "EOF retorna erro de arquivo");
 }
 
+static void testar_dobrar_capacidade(void)
+{
+    size_t capacidade = 4;
+    int *valores = malloc(capacidade * sizeof(*valores));
+    int *temporario;
+    int i;
+
+    TESTE_VERIFICAR(valores != NULL, "alocar vetor para crescimento");
+    if (valores == NULL) {
+        return;
+    }
+    for (i = 0; i < 4; i++) {
+        valores[i] = (i + 1) * 10;
+    }
+    temporario = util_dobrar_capacidade(valores, &capacidade,
+                                        sizeof(*valores));
+    TESTE_VERIFICAR(temporario != NULL && capacidade == 8,
+                    "dobrar capacidade de 4 para 8");
+    if (temporario != NULL) {
+        valores = temporario;
+    }
+    if (capacidade == 8) {
+        for (i = 0; i < 4; i++) {
+            TESTE_VERIFICAR(valores[i] == (i + 1) * 10,
+                            "preservar dados ao dobrar capacidade");
+        }
+    }
+    free(valores);
+}
+
 int main(void)
 {
     int fechamento_ok;
 
     testar_texto_e_validacoes();
+    testar_dobrar_capacidade();
     testar_entrada();
 
     fechamento_ok = fclose(stdin) == 0;

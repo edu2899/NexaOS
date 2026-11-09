@@ -35,40 +35,21 @@ static const char equipamento_sql_cliente[] =
     "JOIN clientes c ON c.id = e.cliente_id "
     "WHERE e.cliente_id = ?1 ORDER BY e.id;";
 
-static void equipamento_copiar_coluna(char *destino, size_t tamanho,
-                                      sqlite3_stmt *consulta, int coluna)
-{
-    const unsigned char *texto = sqlite3_column_text(consulta, coluna);
-
-    snprintf(destino, tamanho, "%s", texto != NULL ? (const char *)texto : "");
-}
-
 static void equipamento_ler_colunas(sqlite3_stmt *consulta,
                                     Equipamento *equipamento)
 {
     equipamento->id = sqlite3_column_int(consulta, 0);
     equipamento->cliente_id = sqlite3_column_int(consulta, 1);
-    equipamento_copiar_coluna(equipamento->cliente_nome,
-                              sizeof(equipamento->cliente_nome), consulta, 2);
-    equipamento_copiar_coluna(equipamento->tipo,
-                              sizeof(equipamento->tipo), consulta, 3);
-    equipamento_copiar_coluna(equipamento->marca,
-                              sizeof(equipamento->marca), consulta, 4);
-    equipamento_copiar_coluna(equipamento->modelo,
-                              sizeof(equipamento->modelo), consulta, 5);
-    equipamento_copiar_coluna(equipamento->numero_serie,
-                              sizeof(equipamento->numero_serie), consulta, 6);
-}
-
-static Resultado equipamento_finalizar(sqlite3 *db, sqlite3_stmt *consulta,
-                                       Resultado resultado)
-{
-    int codigo = sqlite3_finalize(consulta);
-
-    if (codigo != SQLITE_OK && resultado == RES_OK) {
-        return db_traduzir_erro(db);
-    }
-    return resultado;
+    db_copiar_coluna(equipamento->cliente_nome,
+                     sizeof(equipamento->cliente_nome), consulta, 2);
+    db_copiar_coluna(equipamento->tipo, sizeof(equipamento->tipo), consulta,
+                     3);
+    db_copiar_coluna(equipamento->marca, sizeof(equipamento->marca), consulta,
+                     4);
+    db_copiar_coluna(equipamento->modelo, sizeof(equipamento->modelo), consulta,
+                     5);
+    db_copiar_coluna(equipamento->numero_serie,
+                     sizeof(equipamento->numero_serie), consulta, 6);
 }
 
 static int equipamento_executar_insert(sqlite3_stmt *consulta,
@@ -86,20 +67,16 @@ static int equipamento_executar_insert(sqlite3_stmt *consulta,
 
     codigo = sqlite3_bind_int(consulta, 1, equipamento->cliente_id);
     if (codigo == SQLITE_OK) {
-        codigo = sqlite3_bind_text(consulta, 2, equipamento->tipo, -1,
-                                   SQLITE_TRANSIENT);
+        codigo = db_vincular_texto(consulta, 2, equipamento->tipo, 0);
     }
     if (codigo == SQLITE_OK) {
-        codigo = sqlite3_bind_text(consulta, 3, equipamento->marca, -1,
-                                   SQLITE_TRANSIENT);
+        codigo = db_vincular_texto(consulta, 3, equipamento->marca, 0);
     }
     if (codigo == SQLITE_OK) {
-        codigo = sqlite3_bind_text(consulta, 4, equipamento->modelo, -1,
-                                   SQLITE_TRANSIENT);
+        codigo = db_vincular_texto(consulta, 4, equipamento->modelo, 0);
     }
     if (codigo == SQLITE_OK) {
-        codigo = sqlite3_bind_text(consulta, 5, numero_serie, -1,
-                                   SQLITE_TRANSIENT);
+        codigo = db_vincular_texto(consulta, 5, numero_serie, 0);
     }
     return codigo == SQLITE_OK ? sqlite3_step(consulta) : codigo;
 }
@@ -183,11 +160,11 @@ Resultado equipamento_inserir(sqlite3 *db, const Equipamento *equipamento,
     codigo = equipamento_executar_insert(consulta, equipamento);
     if (codigo != SQLITE_DONE) {
         resultado = db_traduzir_erro(db);
-        return equipamento_finalizar(db, consulta, resultado);
+        return db_finalizar(db, consulta, resultado);
     }
 
     *id_novo = (int)sqlite3_last_insert_rowid(db);
-    return equipamento_finalizar(db, consulta, RES_OK);
+    return db_finalizar(db, consulta, RES_OK);
 }
 
 Resultado equipamento_buscar_por_id(sqlite3 *db, int id,
@@ -211,12 +188,12 @@ Resultado equipamento_buscar_por_id(sqlite3 *db, int id,
     }
     if (codigo == SQLITE_ROW) {
         equipamento_ler_colunas(consulta, saida);
-        return equipamento_finalizar(db, consulta, RES_OK);
+        return db_finalizar(db, consulta, RES_OK);
     }
     if (codigo == SQLITE_DONE) {
-        return equipamento_finalizar(db, consulta, RES_NAO_ENCONTRADO);
+        return db_finalizar(db, consulta, RES_NAO_ENCONTRADO);
     }
-    return equipamento_finalizar(db, consulta, db_traduzir_erro(db));
+    return db_finalizar(db, consulta, db_traduzir_erro(db));
 }
 
 static Resultado equipamento_preparar_listagem(sqlite3 *db,
@@ -242,24 +219,12 @@ static Resultado equipamento_adicionar_linha(sqlite3_stmt *consulta,
                                              size_t *capacidade, int total)
 {
     if ((size_t)total == *capacidade) {
-        size_t nova_capacidade;
-        Equipamento *temporario;
-
-        if (*capacidade > (size_t)-1 / 2 ||
-            *capacidade > (size_t)INT_MAX / 2) {
-            return RES_ERRO_MEMORIA;
-        }
-        nova_capacidade = *capacidade * 2;
-        if (nova_capacidade > (size_t)-1 / sizeof(**equipamentos)) {
-            return RES_ERRO_MEMORIA;
-        }
-        temporario = realloc(*equipamentos,
-                             nova_capacidade * sizeof(**equipamentos));
+        Equipamento *temporario = util_dobrar_capacidade(
+            *equipamentos, capacidade, sizeof(**equipamentos));
         if (temporario == NULL) {
             return RES_ERRO_MEMORIA;
         }
         *equipamentos = temporario;
-        *capacidade = nova_capacidade;
     }
     equipamento_ler_colunas(consulta, &(*equipamentos)[total]);
     equipamento_ler_colunas(consulta, &(*equipamentos)[total]);
@@ -285,6 +250,19 @@ static Resultado equipamento_coletar_linhas(sqlite3 *db,
         (*total)++;
     }
     return codigo == SQLITE_DONE ? RES_OK : db_traduzir_erro(db);
+}
+
+static Resultado equipamento_publicar_lista(Equipamento *equipamentos,
+                                            int total, Equipamento **lista,
+                                            int *quantidade)
+{
+    if (total == 0) {
+        free(equipamentos);
+        return RES_OK;
+    }
+    *lista = equipamentos;
+    *quantidade = total;
+    return RES_OK;
 }
 
 static Resultado equipamento_listar_interno(sqlite3 *db, int filtrar_cliente,
@@ -314,20 +292,13 @@ static Resultado equipamento_listar_interno(sqlite3 *db, int filtrar_cliente,
                                                &total);
     }
     if (consulta != NULL) {
-        resultado = equipamento_finalizar(db, consulta, resultado);
+        resultado = db_finalizar(db, consulta, resultado);
     }
     if (resultado != RES_OK) {
         free(equipamentos);
         return resultado;
     }
-    if (total == 0) {
-        free(equipamentos);
-        return RES_OK;
-    }
-
-    *lista = equipamentos;
-    *quantidade = total;
-    return RES_OK;
+    return equipamento_publicar_lista(equipamentos, total, lista, quantidade);
 }
 
 Resultado equipamento_listar(sqlite3 *db, Equipamento **lista,
@@ -438,6 +409,7 @@ static void equipamento_mostrar_lista(sqlite3 *db, int filtrar_cliente,
     Equipamento *lista = NULL;
     int quantidade = 0;
     int i;
+    char id[16];
     Resultado resultado = filtrar_cliente
         ? equipamento_listar_por_cliente(db, cliente_id, &lista, &quantidade)
         : equipamento_listar(db, &lista, &quantidade);
@@ -447,13 +419,22 @@ static void equipamento_mostrar_lista(sqlite3 *db, int filtrar_cliente,
     } else if (quantidade == 0) {
         puts("Nenhum equipamento cadastrado.");
     } else {
-        printf("%-5s %-22s %-13s %-14s %-14s %-18s\n", "ID", "Cliente",
-               "Tipo", "Marca", "Modelo", "Nº de série");
+        util_imprimir_coluna("ID", 5);
+        util_imprimir_coluna("Cliente", 22);
+        util_imprimir_coluna("Tipo", 13);
+        util_imprimir_coluna("Marca", 14);
+        util_imprimir_coluna("Modelo", 14);
+        util_imprimir_coluna("Nº de série", 18);
+        putchar('\n');
         for (i = 0; i < quantidade; i++) {
-            printf("%-5d %-22.22s %-13.13s %-14.14s %-14.14s %-18.18s\n",
-                   lista[i].id, lista[i].cliente_nome,
-                   equipamento_tipo_rotulo(lista[i].tipo), lista[i].marca,
-                   lista[i].modelo, lista[i].numero_serie);
+            snprintf(id, sizeof(id), "%d", lista[i].id);
+            util_imprimir_coluna(id, 5);
+            util_imprimir_coluna(lista[i].cliente_nome, 22);
+            util_imprimir_coluna(equipamento_tipo_rotulo(lista[i].tipo), 13);
+            util_imprimir_coluna(lista[i].marca, 14);
+            util_imprimir_coluna(lista[i].modelo, 14);
+            util_imprimir_coluna(lista[i].numero_serie, 18);
+            putchar('\n');
         }
     }
     free(lista);

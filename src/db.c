@@ -209,3 +209,35 @@ Resultado db_traduzir_erro(sqlite3 *db)
             return RES_ERRO_BANCO;
     }
 }
+
+void db_copiar_coluna(char *destino, size_t tamanho,
+                      sqlite3_stmt *consulta, int coluna)
+{
+    const unsigned char *texto;
+
+    if (destino == NULL || tamanho == 0 || consulta == NULL) {
+        return;
+    }
+    texto = sqlite3_column_text(consulta, coluna);
+    snprintf(destino, tamanho, "%s", texto != NULL ? (const char *)texto : "");
+}
+
+Resultado db_finalizar(sqlite3 *db, sqlite3_stmt *consulta,
+                       Resultado resultado)
+{
+    int codigo = sqlite3_finalize(consulta);
+
+    if (resultado == RES_OK && codigo != SQLITE_OK) {
+        return db_traduzir_erro(db);
+    }
+    return resultado;
+}
+
+int db_vincular_texto(sqlite3_stmt *consulta, int indice, const char *texto,
+                      int opcional)
+{
+    if (opcional && (texto == NULL || texto[0] == '\0')) {
+        return sqlite3_bind_null(consulta, indice);
+    }
+    return sqlite3_bind_text(consulta, indice, texto, -1, SQLITE_TRANSIENT);
+}

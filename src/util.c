@@ -297,6 +297,33 @@ void util_imprimir_coluna(const char *texto, int largura)
     putchar(' ');
 }
 
+void util_formatar_data(const char *iso, char *destino, size_t tamanho)
+{
+    size_t i;
+    int formato_valido = iso != NULL && strlen(iso) == 19 &&
+        iso[4] == '-' && iso[7] == '-' && iso[10] == ' ' &&
+        iso[13] == ':' && iso[16] == ':';
+
+    if (destino == NULL || tamanho == 0) {
+        return;
+    }
+    if (formato_valido) {
+        for (i = 0; i < 19; i++) {
+            if (i != 4 && i != 7 && i != 10 && i != 13 && i != 16 &&
+                (iso[i] < '0' || iso[i] > '9')) {
+                formato_valido = 0;
+                break;
+            }
+        }
+    }
+    if (formato_valido) {
+        snprintf(destino, tamanho, "%.2s/%.2s/%.4s%s", iso + 8, iso + 5,
+                 iso, iso + 10);
+    } else {
+        snprintf(destino, tamanho, "%s", iso != NULL ? iso : "");
+    }
+}
+
 void util_titulo(const char *titulo)
 {
     printf("========== %s ==========\n", titulo != NULL ? titulo : "");

@@ -125,12 +125,25 @@ static void testar_dobrar_capacidade(void)
     free(valores);
 }
 
+static void testar_formatar_data(void)
+{
+    char data[32];
+
+    util_formatar_data("2026-11-09 14:30:05", data, sizeof(data));
+    TESTE_VERIFICAR(strcmp(data, "09/11/2026 14:30:05") == 0,
+                    "formatar data ISO");
+    util_formatar_data("data desconhecida", data, sizeof(data));
+    TESTE_VERIFICAR(strcmp(data, "data desconhecida") == 0,
+                    "preservar formato de data desconhecido");
+}
+
 int main(void)
 {
     int fechamento_ok;
 
     testar_texto_e_validacoes();
     testar_dobrar_capacidade();
+    testar_formatar_data();
     testar_entrada();
 
     fechamento_ok = fclose(stdin) == 0;

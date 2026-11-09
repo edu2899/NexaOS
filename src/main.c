@@ -2,6 +2,7 @@
 #include "clientes.h"
 #include "equipamentos.h"
 #include "tecnicos.h"
+#include "ordens.h"
 #include "util.h"
 
 #include <stdio.h>
@@ -53,6 +54,8 @@ static void executar_menu_principal(sqlite3 *db)
                 menu_tecnicos(db);
                 break;
             case 4:
+                menu_ordens(db);
+                break;
             case 5:
             case 6:
             case 7:

@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 static int util_eh_espaco_ponta(char caractere)
 {
@@ -248,6 +249,14 @@ int util_validar_email(const char *email)
     }
 
     return ponto != NULL && ponto != arroba + 1 && ponto[1] != '\0';
+}
+
+int util_ano_atual(void)
+{
+    time_t agora = time(NULL);
+    struct tm *data = localtime(&agora);
+
+    return data == NULL ? 0 : data->tm_year + 1900;
 }
 
 void *util_dobrar_capacidade(void *vetor, size_t *capacidade,

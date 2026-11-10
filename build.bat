@@ -1,6 +1,6 @@
 @echo off
 cd /d "%~dp0" || exit /b 1
-set "MODULOS=src\db.c src\util.c src\clientes.c src\equipamentos.c src\tecnicos.c src\historico.c src\ordens.c src\menu_ordens.c src\pecas.c src\menu_estoque.c src\itens_ordem.c src\menu_itens_ordem.c"
+set "MODULOS=src\db.c src\util.c src\clientes.c src\equipamentos.c src\tecnicos.c src\historico.c src\ordens.c src\menu_ordens.c src\pecas.c src\menu_estoque.c src\itens_ordem.c src\menu_itens_ordem.c src\relatorios.c src\menu_relatorios.c"
 
 if /i "%~1"=="test" (
     if not exist build mkdir build || exit /b 1

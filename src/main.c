@@ -4,6 +4,7 @@
 #include "tecnicos.h"
 #include "menu_ordens.h"
 #include "menu_estoque.h"
+#include "menu_relatorios.h"
 #include "util.h"
 
 #include <stdio.h>
@@ -61,6 +62,8 @@ static void executar_menu_principal(sqlite3 *db)
                 menu_estoque(db);
                 break;
             case 6:
+                menu_relatorios(db);
+                break;
             case 7:
                 puts("Módulo ainda não implementado.");
                 break;

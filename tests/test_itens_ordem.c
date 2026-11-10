@@ -424,6 +424,7 @@ static void executar_testes(sqlite3 *db, DadosTeste *dados)
 
 int main(void)
 {
+    vazamento_iniciar();
     sqlite3 *db = NULL;
     DadosTeste dados = {0};
 

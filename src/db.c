@@ -1,3 +1,7 @@
+/*
+ * Centraliza a abertura e o fechamento do banco SQLite.
+ * Tambem oferece consultas auxiliares e controle de transacoes.
+ */
 #include "db.h"
 
 #include <stdio.h>
@@ -26,17 +30,17 @@ static Resultado db_executar_sql(sqlite3 *db, const char *sql)
     return RES_OK;
 }
 
-Resultado db_executar_script(sqlite3 *db, const char *arquivo)
+static Resultado db_ler_arquivo(const char *arquivo, char **conteudo)
 {
     FILE *arq;
     long tamanho;
-    char *conteudo;
+    char *buffer;
     size_t lidos;
-    Resultado resultado;
 
-    if (db == NULL || arquivo == NULL) {
+    if (arquivo == NULL || conteudo == NULL) {
         return RES_INVALIDO;
     }
+    *conteudo = NULL;
 
     arq = fopen(arquivo, "rb");
     if (arq == NULL) {
@@ -57,110 +61,109 @@ Resultado db_executar_script(sqlite3 *db, const char *arquivo)
         return RES_ERRO_ARQUIVO;
     }
 
-    conteudo = malloc((size_t)tamanho + 1);
-    if (conteudo == NULL) {
+    buffer = malloc((size_t)tamanho + 1);
+    if (buffer == NULL) {
         if (fclose(arq) != 0) {
             perror("fclose");
         }
         return RES_ERRO_MEMORIA;
     }
 
-    lidos = fread(conteudo, 1, (size_t)tamanho, arq);
+    lidos = fread(buffer, 1, (size_t)tamanho, arq);
     if (lidos != (size_t)tamanho || ferror(arq)) {
         fprintf(stderr, "Erro ao ler o arquivo %s.\n", arquivo);
-        free(conteudo);
+        free(buffer);
         if (fclose(arq) != 0) {
             perror("fclose");
         }
         return RES_ERRO_ARQUIVO;
     }
 
-    conteudo[tamanho] = '\0';
+    buffer[tamanho] = '\0';
     if (fclose(arq) != 0) {
         fprintf(stderr, "Erro ao fechar o arquivo %s.\n", arquivo);
-        free(conteudo);
+        free(buffer);
         return RES_ERRO_ARQUIVO;
     }
 
+    *conteudo = buffer;
+    return RES_OK;
+}
+
+Resultado db_executar_script(sqlite3 *db, const char *arquivo)
+{
+    char *conteudo;
+    Resultado resultado;
+
+    if (db == NULL || arquivo == NULL) return RES_INVALIDO;
+    resultado = db_ler_arquivo(arquivo, &conteudo);
+    if (resultado != RES_OK) return resultado;
     resultado = db_executar_sql(db, conteudo);
     free(conteudo);
     return resultado;
 }
 
-Resultado db_abrir(sqlite3 **db, const char *caminho)
+static Resultado db_ativar_chaves_estrangeiras(sqlite3 *db)
 {
     sqlite3_stmt *consulta = NULL;
     int codigo;
-    Resultado resultado;
 
-    if (db == NULL || caminho == NULL) {
-        return RES_INVALIDO;
-    }
-    *db = NULL;
-
-    codigo = sqlite3_open(caminho, db);
-    if (codigo != SQLITE_OK) {
-        fprintf(stderr, "Erro ao abrir o banco: %s\n",
-                *db != NULL ? sqlite3_errmsg(*db) : "falha de memoria");
-        db_fechar(*db);
-        *db = NULL;
-        return RES_ERRO_BANCO;
-    }
-
-    if (sqlite3_extended_result_codes(*db, 1) != SQLITE_OK) {
-        resultado = RES_ERRO_BANCO;
-        goto falha;
-    }
-
-    resultado = db_executar_sql(*db, "PRAGMA foreign_keys = ON;");
+    Resultado resultado = db_executar_sql(db, "PRAGMA foreign_keys = ON;");
     if (resultado != RES_OK) {
-        goto falha;
+        return resultado;
     }
 
-    codigo = sqlite3_prepare_v2(*db, "PRAGMA foreign_keys;", -1, &consulta, NULL);
+    codigo = sqlite3_prepare_v2(db, "PRAGMA foreign_keys;", -1, &consulta, NULL);
     if (codigo != SQLITE_OK) {
-        fprintf(stderr, "Erro SQLite: %s\n", sqlite3_errmsg(*db));
-        resultado = db_traduzir_erro(*db);
-        goto falha;
+        fprintf(stderr, "Erro SQLite: %s\n", sqlite3_errmsg(db));
+        return db_traduzir_erro(db);
     }
 
     codigo = sqlite3_step(consulta);
     if (codigo != SQLITE_ROW || sqlite3_column_int(consulta, 0) != 1) {
         fprintf(stderr, "Erro SQLite: nao foi possivel ativar as chaves estrangeiras.\n");
         codigo = sqlite3_finalize(consulta);
-        consulta = NULL;
         if (codigo != SQLITE_OK) {
-            fprintf(stderr, "Erro SQLite: %s\n", sqlite3_errmsg(*db));
+            fprintf(stderr, "Erro SQLite: %s\n", sqlite3_errmsg(db));
         }
-        resultado = RES_ERRO_BANCO;
-        goto falha;
+        return RES_ERRO_BANCO;
     }
 
     codigo = sqlite3_finalize(consulta);
-    consulta = NULL;
     if (codigo != SQLITE_OK) {
-        fprintf(stderr, "Erro SQLite: %s\n", sqlite3_errmsg(*db));
-        resultado = db_traduzir_erro(*db);
-        goto falha;
+        fprintf(stderr, "Erro SQLite: %s\n", sqlite3_errmsg(db));
+        return db_traduzir_erro(db);
     }
-
-    resultado = db_executar_script(*db, "database/schema.sql");
-    if (resultado != RES_OK) {
-        goto falha;
-    }
-
     return RES_OK;
+}
 
-falha:
-    if (consulta != NULL) {
-        codigo = sqlite3_finalize(consulta);
-        if (codigo != SQLITE_OK) {
-            fprintf(stderr, "Erro SQLite: %s\n", sqlite3_errmsg(*db));
-        }
-    }
-    db_fechar(*db);
+Resultado db_abrir(sqlite3 **db, const char *caminho)
+{
+    Resultado resultado;
+
+    if (db == NULL || caminho == NULL) return RES_INVALIDO;
     *db = NULL;
-    return resultado;
+    if (sqlite3_open(caminho, db) != SQLITE_OK) {
+        fprintf(stderr, "Erro ao abrir o banco: %s\n",
+                *db != NULL ? sqlite3_errmsg(*db) : "falha de memoria");
+        db_fechar(*db);
+        *db = NULL;
+        return RES_ERRO_BANCO;
+    }
+    if (sqlite3_extended_result_codes(*db, 1) != SQLITE_OK) {
+        resultado = RES_ERRO_BANCO;
+    } else {
+        resultado = db_ativar_chaves_estrangeiras(*db);
+    }
+    if (resultado == RES_OK) {
+        resultado = db_executar_script(*db, "database/schema.sql");
+    }
+    if (resultado != RES_OK) {
+        db_fechar(*db);
+        *db = NULL;
+        return resultado;
+    }
+    return RES_OK;
 }
 
 void db_fechar(sqlite3 *db)

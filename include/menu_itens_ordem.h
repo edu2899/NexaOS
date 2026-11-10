@@ -3,6 +3,7 @@
 
 #include "db.h"
 
+/* Executa o menu de peças usadas em ordens. */
 void menu_itens_ordem(sqlite3 *db);
 
 #endif

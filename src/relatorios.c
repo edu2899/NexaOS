@@ -1,9 +1,12 @@
+/*
+ * Consulta totais de ordens por situacao e por mes.
+ * Tambem fornece somas puras para as telas e exportacoes.
+ */
 #include "relatorios.h"
 
 #include "util.h"
 
 #include <stdio.h>
-#include <string.h>
 
 static void relatorio_zerar_resumo(ResumoOrdens *resumo)
 {

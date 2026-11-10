@@ -1,3 +1,7 @@
+/*
+ * Implementa abertura, consulta e atualizacao de ordens de servico.
+ * Registra eventos de historico junto das alteracoes correspondentes.
+ */
 #include "ordens.h"
 
 #include "equipamentos.h"

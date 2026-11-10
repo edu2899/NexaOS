@@ -1,3 +1,7 @@
+/*
+ * Apresenta as operacoes disponiveis para o controle de estoque.
+ * As consultas e alteracoes sao realizadas pelo modulo de pecas.
+ */
 #include "menu_estoque.h"
 
 #include "pecas.h"

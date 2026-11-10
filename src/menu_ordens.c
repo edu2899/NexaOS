@@ -1,3 +1,7 @@
+/*
+ * Apresenta as operacoes e consultas do fluxo de ordens.
+ * As regras e persistencia ficam no modulo ordens.
+ */
 #include "menu_ordens.h"
 
 #include "clientes.h"

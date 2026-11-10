@@ -362,6 +362,7 @@ static void testar_movimentacoes(sqlite3 *db, int peca_id, int ordem_id)
 
 int main(void)
 {
+    vazamento_iniciar();
     sqlite3 *db = NULL;
     int equipamento_id = 0;
     int tecnico_id = 0;

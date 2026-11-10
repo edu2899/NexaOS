@@ -33,21 +33,33 @@ typedef struct OrdemServico {
     char data_abertura[20];
 } OrdemServico;
 
+/* Devolve o código usado no banco para uma situação. */
 const char *os_status_codigo(StatusOS status);
+/* Devolve o rótulo exibido para uma situação. */
 const char *os_status_rotulo(StatusOS status);
+/* Localiza o índice de uma situação pelo código do banco. */
 int os_status_de_codigo(const char *codigo);
+/* Verifica se uma mudança de situação é permitida. */
 int ordem_transicao_permitida(StatusOS atual, StatusOS novo_status);
+/* Informa se a ordem está em uma situação encerrada. */
 int ordem_encerrada(const char *status_codigo);
+/* Abre uma ordem e registra seu evento inicial. */
 Resultado ordem_abrir(sqlite3 *db, int equipamento_id, int tecnico_id,
                       const char *descricao_problema, int *id_novo);
+/* Busca uma ordem pelo identificador. */
 Resultado ordem_buscar_por_id(sqlite3 *db, int id, OrdemServico *saida);
+/* Lista ordens, opcionalmente filtradas por situação. */
 Resultado ordem_listar(sqlite3 *db, const char *status_codigo,
                        OrdemServico **lista, int *quantidade);
+/* Atribui um técnico à ordem. */
 Resultado ordem_atribuir_tecnico(sqlite3 *db, int ordem_id, int tecnico_id);
+/* Registra o diagnóstico de uma ordem. */
 Resultado ordem_registrar_diagnostico(sqlite3 *db, int ordem_id,
                                       const char *diagnostico);
+/* Registra uma observação no histórico da ordem. */
 Resultado ordem_registrar_observacao(sqlite3 *db, int ordem_id,
                                      const char *observacao);
+/* Atualiza a situação da ordem. */
 Resultado ordem_atualizar_status(sqlite3 *db, int ordem_id,
                                  StatusOS novo_status,
                                  const char *observacao);

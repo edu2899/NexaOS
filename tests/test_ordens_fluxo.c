@@ -351,6 +351,7 @@ static void testar_persistencia(sqlite3 **db, int ordem_id)
 
 int main(void)
 {
+    vazamento_iniciar();
     sqlite3 *db = NULL;
     int equipamento_id = 0;
     int tecnico_a = 0;

@@ -1,3 +1,7 @@
+/*
+ * Solicita relatorios e exporta arquivos CSV para a pasta exports.
+ * Os dados sao preparados pelo modulo de exportacao.
+ */
 #include "menu_exportacao.h"
 
 #include "exportacao.h"

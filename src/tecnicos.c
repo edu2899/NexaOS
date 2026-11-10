@@ -1,3 +1,7 @@
+/*
+ * Implementa cadastro e consultas de tecnicos.
+ * Tambem apresenta as telas do menu de tecnicos.
+ */
 #include "tecnicos.h"
 
 #include "util.h"

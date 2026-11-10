@@ -3,6 +3,7 @@
 
 #include "db.h"
 
+/* Executa o menu de controle de estoque. */
 void menu_estoque(sqlite3 *db);
 
 #endif

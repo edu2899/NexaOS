@@ -121,6 +121,7 @@ static void testar_listas(sqlite3 *db, const int *ids, int id_cliente_a,
 
 int main(void)
 {
+    vazamento_iniciar();
     sqlite3 *db = NULL;
     Equipamento primeiro;
     Equipamento segundo;

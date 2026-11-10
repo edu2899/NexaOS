@@ -1,3 +1,7 @@
+/*
+ * Implementa validacao, cadastro e consultas de equipamentos.
+ * Tambem controla as telas do menu de equipamentos.
+ */
 #include "equipamentos.h"
 
 #include "clientes.h"
@@ -226,7 +230,6 @@ static Resultado equipamento_adicionar_linha(sqlite3_stmt *consulta,
         }
         *equipamentos = temporario;
     }
-    equipamento_ler_colunas(consulta, &(*equipamentos)[total]);
     equipamento_ler_colunas(consulta, &(*equipamentos)[total]);
     return RES_OK;
 }

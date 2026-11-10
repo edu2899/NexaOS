@@ -1,10 +1,13 @@
+/*
+ * Apresenta os relatorios de ordens e de estoque.
+ * Os dados sao obtidos dos modulos de relatorio e pecas.
+ */
 #include "menu_relatorios.h"
 
 #include "pecas.h"
 #include "relatorios.h"
 #include "util.h"
 
-#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 

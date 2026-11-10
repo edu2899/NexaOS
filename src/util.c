@@ -1,3 +1,7 @@
+/*
+ * Reune leitura, validacao e formatacao compartilhadas pelo sistema.
+ * Tambem oferece mensagens e auxiliares para as telas.
+ */
 #include "util.h"
 
 #include <ctype.h>

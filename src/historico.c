@@ -1,8 +1,11 @@
+/*
+ * Registra e consulta os eventos associados as ordens.
+ * As alteracoes ficam sob controle da transacao do chamador.
+ */
 #include "historico.h"
 
 #include "util.h"
 
-#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 

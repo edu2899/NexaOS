@@ -1,3 +1,7 @@
+/*
+ * Implementa cadastro, consulta e movimentacao de pecas.
+ * Mantem o estoque sincronizado com o historico de movimentacoes.
+ */
 #include "pecas.h"
 
 #include "util.h"

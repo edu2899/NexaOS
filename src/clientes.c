@@ -1,3 +1,7 @@
+/*
+ * Implementa o cadastro e a consulta de clientes.
+ * Tambem apresenta as telas do menu de clientes.
+ */
 #include "clientes.h"
 
 #include "util.h"

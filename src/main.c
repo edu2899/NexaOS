@@ -1,3 +1,7 @@
+/*
+ * Inicializa o banco e direciona o usuario aos menus do sistema.
+ * As regras de negocio ficam nos modulos especializados.
+ */
 #include "db.h"
 #include "clientes.h"
 #include "equipamentos.h"
@@ -28,6 +32,20 @@ static void exibir_menu_principal(void)
     printf("0 - Sair\n\n");
 }
 
+static void executar_opcao(sqlite3 *db, int opcao)
+{
+    switch (opcao) {
+        case 1: menu_clientes(db); break;
+        case 2: menu_equipamentos(db); break;
+        case 3: menu_tecnicos(db); break;
+        case 4: menu_ordens(db); break;
+        case 5: menu_estoque(db); break;
+        case 6: menu_relatorios(db); break;
+        case 7: menu_exportacao(db); break;
+        default: break;
+    }
+}
+
 static void executar_menu_principal(sqlite3 *db)
 {
     int opcao;
@@ -44,36 +62,12 @@ static void executar_menu_principal(sqlite3 *db)
             continue;
         }
 
-        switch (opcao) {
-            case 0:
-                return;
-            case 1:
-                menu_clientes(db);
-                break;
-            case 2:
-                menu_equipamentos(db);
-                break;
-            case 3:
-                menu_tecnicos(db);
-                break;
-            case 4:
-                menu_ordens(db);
-                break;
-            case 5:
-                menu_estoque(db);
-                break;
-            case 6:
-                menu_relatorios(db);
-                break;
-            case 7:
-                menu_exportacao(db);
-                break;
-            default:
-                break;
-        }
+        if (opcao == 0) return;
+        executar_opcao(db, opcao);
     }
 }
 
+/* Inicializa o banco e executa o menu principal. */
 int main(void)
 {
     sqlite3 *db = NULL;

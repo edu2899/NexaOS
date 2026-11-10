@@ -139,6 +139,7 @@ static void testar_formatar_data(void)
 
 int main(void)
 {
+    vazamento_iniciar();
     int fechamento_ok;
 
     testar_texto_e_validacoes();

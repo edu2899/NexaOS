@@ -1,3 +1,7 @@
+/*
+ * Permite registrar e consultar pecas utilizadas em ordens.
+ * As operacoes de dados ficam no modulo itens_ordem.
+ */
 #include "menu_itens_ordem.h"
 
 #include "itens_ordem.h"

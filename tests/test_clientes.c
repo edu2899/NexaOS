@@ -127,6 +127,7 @@ static void testar_listagem(sqlite3 *db, const int *ids, int esperados)
 
 int main(void)
 {
+    vazamento_iniciar();
     sqlite3 *db = NULL;
     Cliente primeiro;
     Cliente segundo;

@@ -61,6 +61,7 @@ static int cliente_existe(sqlite3 *db)
 
 int main(void)
 {
+    vazamento_iniciar();
     static const char *tabelas[] = {
         "clientes", "equipamentos", "tecnicos", "ordens_servico",
         "pecas", "itens_ordem", "historico_ordens", "movimentacoes_estoque"

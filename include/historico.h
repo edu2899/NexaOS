@@ -13,12 +13,13 @@ typedef struct EventoHistorico {
     char data_hora[20];
 } EventoHistorico;
 
-/* A transacao e controlada por quem chama esta funcao. */
+/* Registra um evento dentro da transação controlada pelo chamador. */
 Resultado historico_registrar(sqlite3 *db, int ordem_id,
                               const char *tipo_evento,
                               const char *status_anterior,
                               const char *status_novo,
                               const char *descricao);
+/* Lista os eventos de uma ordem em um vetor alocado. */
 Resultado historico_listar_por_ordem(sqlite3 *db, int ordem_id,
                                      EventoHistorico **lista,
                                      int *quantidade);

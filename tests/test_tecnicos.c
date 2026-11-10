@@ -70,6 +70,7 @@ static void testar_listagem(sqlite3 *db, const int ids[3])
 
 int main(void)
 {
+    vazamento_iniciar();
     sqlite3 *db = NULL;
     Tecnico primeiro;
     Tecnico segundo;

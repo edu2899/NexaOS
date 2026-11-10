@@ -1,3 +1,7 @@
+/*
+ * Gera arquivos CSV com relatorios e dados de estoque.
+ * Trata campos especiais e neutraliza valores interpretaveis como formulas.
+ */
 #include "exportacao.h"
 
 #include "pecas.h"

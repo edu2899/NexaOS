@@ -1,3 +1,7 @@
+/*
+ * Registra pecas usadas em ordens e lista seus itens.
+ * As gravacoes de uso compartilham uma unica transacao.
+ */
 #include "itens_ordem.h"
 
 #include "historico.h"

@@ -8,7 +8,8 @@ typedef enum Resultado {
     RES_NAO_ENCONTRADO,
     RES_INVALIDO,
     RES_ERRO_MEMORIA,
-    RES_ERRO_ARQUIVO
+    RES_ERRO_ARQUIVO,
+    RES_REGRA_NEGOCIO
 } Resultado;
 
 #endif

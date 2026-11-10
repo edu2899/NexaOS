@@ -1,6 +1,5 @@
 #include "ordens.h"
 
-#include "clientes.h"
 #include "equipamentos.h"
 #include "historico.h"
 #include "tecnicos.h"
@@ -19,28 +18,39 @@ static const char *const os_rotulos[OS_STATUS_TOTAL] = {
     "Aberta", "Em diagnóstico", "Aguardando aprovação", "Aprovada",
     "Aguardando peça", "Em reparo", "Concluída", "Entregue", "Cancelada"
 };
-static const char os_sql_colunas[] =
-    "SELECT o.id, o.equipamento_id, c.id, c.nome, e.tipo, e.marca, "
-    "e.modelo, e.numero_serie, COALESCE(t.id, 0), COALESCE(t.nome, ''), "
-    "o.descricao_problema, o.diagnostico, o.status, o.data_abertura "
-    "FROM ordens_servico o JOIN equipamentos e ON e.id = o.equipamento_id "
-    "JOIN clientes c ON c.id = e.cliente_id "
-    "LEFT JOIN tecnicos t ON t.id = o.tecnico_id ";
-static const char os_sql_todas[] =
-    "SELECT o.id, o.equipamento_id, c.id, c.nome, e.tipo, e.marca, "
-    "e.modelo, e.numero_serie, COALESCE(t.id, 0), COALESCE(t.nome, ''), "
-    "o.descricao_problema, o.diagnostico, o.status, o.data_abertura "
-    "FROM ordens_servico o JOIN equipamentos e ON e.id = o.equipamento_id "
-    "JOIN clientes c ON c.id = e.cliente_id "
-    "LEFT JOIN tecnicos t ON t.id = o.tecnico_id ORDER BY o.id;";
-static const char os_sql_status[] =
-    "SELECT o.id, o.equipamento_id, c.id, c.nome, e.tipo, e.marca, "
-    "e.modelo, e.numero_serie, COALESCE(t.id, 0), COALESCE(t.nome, ''), "
-    "o.descricao_problema, o.diagnostico, o.status, o.data_abertura "
-    "FROM ordens_servico o JOIN equipamentos e ON e.id = o.equipamento_id "
-    "JOIN clientes c ON c.id = e.cliente_id "
+#define OS_SQL_BASE \
+    "SELECT o.id, o.equipamento_id, c.id, c.nome, e.tipo, e.marca, " \
+    "e.modelo, e.numero_serie, COALESCE(t.id, 0), COALESCE(t.nome, ''), " \
+    "o.descricao_problema, o.diagnostico, o.status, o.data_abertura " \
+    "FROM ordens_servico o JOIN equipamentos e ON e.id = o.equipamento_id " \
+    "JOIN clientes c ON c.id = e.cliente_id " \
     "LEFT JOIN tecnicos t ON t.id = o.tecnico_id "
-    "WHERE o.status = ?1 ORDER BY o.id;";
+
+static const char os_sql_id[] = OS_SQL_BASE "WHERE o.id = ?1;";
+static const char os_sql_todas[] = OS_SQL_BASE "ORDER BY o.id;";
+static const char os_sql_status[] =
+    OS_SQL_BASE "WHERE o.status = ?1 ORDER BY o.id;";
+static const int transicoes[OS_STATUS_TOTAL][OS_STATUS_TOTAL] = {
+    [OS_ABERTA] = {
+        [OS_EM_DIAGNOSTICO] = 1, [OS_CANCELADA] = 1
+    },
+    [OS_EM_DIAGNOSTICO] = {
+        [OS_AGUARDANDO_APROVACAO] = 1, [OS_CANCELADA] = 1
+    },
+    [OS_AGUARDANDO_APROVACAO] = {
+        [OS_APROVADA] = 1, [OS_CANCELADA] = 1
+    },
+    [OS_APROVADA] = {
+        [OS_AGUARDANDO_PECA] = 1, [OS_EM_REPARO] = 1, [OS_CANCELADA] = 1
+    },
+    [OS_AGUARDANDO_PECA] = {
+        [OS_EM_REPARO] = 1, [OS_CANCELADA] = 1
+    },
+    [OS_EM_REPARO] = {
+        [OS_AGUARDANDO_PECA] = 1, [OS_CONCLUIDA] = 1, [OS_CANCELADA] = 1
+    },
+    [OS_CONCLUIDA] = {[OS_ENTREGUE] = 1}
+};
 
 const char *os_status_codigo(StatusOS status)
 {
@@ -71,6 +81,23 @@ int os_status_de_codigo(const char *codigo)
         }
     }
     return -1;
+}
+
+int ordem_transicao_permitida(StatusOS atual, StatusOS novo_status)
+{
+    if (atual < OS_ABERTA || atual >= OS_STATUS_TOTAL ||
+        novo_status < OS_ABERTA || novo_status >= OS_STATUS_TOTAL) {
+        return 0;
+    }
+    return transicoes[atual][novo_status];
+}
+
+int ordem_encerrada(const char *status_codigo)
+{
+    return status_codigo != NULL &&
+        (strcmp(status_codigo, "CONCLUIDA") == 0 ||
+         strcmp(status_codigo, "ENTREGUE") == 0 ||
+         strcmp(status_codigo, "CANCELADA") == 0);
 }
 
 static void ordem_ler_colunas(sqlite3_stmt *consulta, OrdemServico *ordem)
@@ -153,28 +180,36 @@ static Resultado ordem_reverter(sqlite3 *db, Resultado erro)
     return erro;
 }
 
+static Resultado ordem_validar_referencias(sqlite3 *db, int equipamento_id,
+                                           int tecnico_id, Tecnico *tecnico)
+{
+    Equipamento equipamento;
+    Resultado resultado = equipamento_buscar_por_id(db, equipamento_id,
+                                                      &equipamento);
+
+    if (resultado == RES_OK && tecnico_id > 0) {
+        resultado = tecnico_buscar_por_id(db, tecnico_id, tecnico);
+    }
+    return resultado;
+}
+
 Resultado ordem_abrir(sqlite3 *db, int equipamento_id, int tecnico_id,
                       const char *descricao_problema, int *id_novo)
 {
-    Equipamento equipamento;
-    Tecnico tecnico;
+    Tecnico tecnico = {0};
     Resultado resultado;
 
+    if (id_novo != NULL) {
+        *id_novo = 0;
+    }
     if (db == NULL || id_novo == NULL || equipamento_id <= 0 ||
         tecnico_id < 0 || descricao_problema == NULL ||
         descricao_problema[0] == '\0') {
         return RES_INVALIDO;
     }
-    resultado = equipamento_buscar_por_id(db, equipamento_id, &equipamento);
-    if (resultado != RES_OK) {
-        return resultado;
-    }
-    if (tecnico_id > 0) {
-        resultado = tecnico_buscar_por_id(db, tecnico_id, &tecnico);
-        if (resultado != RES_OK) {
-            return resultado;
-        }
-    }
+    resultado = ordem_validar_referencias(db, equipamento_id, tecnico_id,
+                                           &tecnico);
+    if (resultado != RES_OK) return resultado;
     resultado = db_iniciar_transacao(db);
     if (resultado != RES_OK) {
         return resultado;
@@ -185,23 +220,26 @@ Resultado ordem_abrir(sqlite3 *db, int equipamento_id, int tecnico_id,
         resultado = ordem_registrar_abertura(db, *id_novo, tecnico_id, &tecnico);
     }
     if (resultado != RES_OK) {
+        *id_novo = 0;
         return ordem_reverter(db, resultado);
     }
     resultado = db_confirmar(db);
-    return resultado == RES_OK ? RES_OK : ordem_reverter(db, resultado);
+    if (resultado != RES_OK) {
+        *id_novo = 0;
+        return ordem_reverter(db, resultado);
+    }
+    return RES_OK;
 }
 
 Resultado ordem_buscar_por_id(sqlite3 *db, int id, OrdemServico *saida)
 {
-    char sql[sizeof(os_sql_colunas) + 32];
     sqlite3_stmt *consulta = NULL;
     int codigo;
 
     if (db == NULL || saida == NULL || id <= 0) {
         return RES_INVALIDO;
     }
-    snprintf(sql, sizeof(sql), "%sWHERE o.id = ?1;", os_sql_colunas);
-    if (sqlite3_prepare_v2(db, sql, -1, &consulta, NULL) != SQLITE_OK) {
+    if (sqlite3_prepare_v2(db, os_sql_id, -1, &consulta, NULL) != SQLITE_OK) {
         return db_traduzir_erro(db);
     }
     codigo = sqlite3_bind_int(consulta, 1, id);
@@ -219,8 +257,8 @@ Resultado ordem_buscar_por_id(sqlite3 *db, int id, OrdemServico *saida)
 }
 
 static Resultado ordem_adicionar_linha(sqlite3_stmt *consulta,
-                                      OrdemServico **ordens,
-                                      size_t *capacidade, int quantidade)
+                                       OrdemServico **ordens,
+                                       size_t *capacidade, int quantidade)
 {
     if ((size_t)quantidade == *capacidade) {
         OrdemServico *temporario = util_dobrar_capacidade(
@@ -285,11 +323,6 @@ static Resultado ordem_publicar_lista(OrdemServico *ordens, int total,
     return RES_OK;
 }
 
-static void ordem_imprimir_cabecalho(void);
-static void ordem_imprimir_linha(const OrdemServico *ordem, char *id,
-                                 size_t id_tamanho, char *data,
-                                 size_t data_tamanho);
-
 Resultado ordem_listar(sqlite3 *db, const char *status_codigo,
                        OrdemServico **lista, int *quantidade)
 {
@@ -323,351 +356,175 @@ Resultado ordem_listar(sqlite3 *db, const char *status_codigo,
     return ordem_publicar_lista(ordens, total, lista, quantidade);
 }
 
-static int ordem_ler_id(const char *mensagem, int *id, int permitir_zero)
+static Resultado ordem_iniciar_e_buscar(sqlite3 *db, int ordem_id,
+                                        OrdemServico *ordem)
 {
-    int minimo = permitir_zero ? 0 : 1;
-    Resultado resultado = util_ler_inteiro(mensagem, minimo, INT_MAX, id);
-
-    if (resultado == RES_ERRO_ARQUIVO) {
-        return 0;
-    }
-    if (resultado != RES_OK) {
-        util_erro(util_texto_resultado(resultado));
-        return 0;
-    }
-    return 1;
-}
-
-static int ordem_selecionar_equipamento(sqlite3 *db, int cliente_id,
-                                        int *equipamento_id)
-{
-    Equipamento *lista = NULL;
-    int quantidade = 0;
-    Resultado resultado = equipamento_listar_por_cliente(
-        db, cliente_id, &lista, &quantidade);
-    int i;
+    Resultado resultado = db_iniciar_transacao(db);
 
     if (resultado != RES_OK) {
-        util_erro(util_texto_resultado(resultado));
-        free(lista);
-        return 0;
+        return resultado;
     }
-    if (quantidade == 0) {
-        puts("Cadastre um equipamento para este cliente primeiro.");
-        free(lista);
-        return 0;
-    }
-    for (i = 0; i < quantidade; i++) {
-        printf("ID %d - %s %s (%s)\n", lista[i].id, lista[i].marca,
-               lista[i].modelo, equipamento_tipo_rotulo(lista[i].tipo));
-    }
-    free(lista);
-    return ordem_ler_id("ID do equipamento: ", equipamento_id, 0);
+    resultado = ordem_buscar_por_id(db, ordem_id, ordem);
+    return resultado == RES_OK ? RES_OK : ordem_reverter(db, resultado);
 }
 
-static int ordem_confirmar_equipamento(sqlite3 *db, int cliente_id,
-                                       int equipamento_id)
+static Resultado ordem_executar_update_texto(sqlite3 *db, const char *sql,
+                                            int ordem_id, const char *texto)
 {
-    Equipamento equipamento;
-    Resultado resultado = equipamento_buscar_por_id(db, equipamento_id,
-                                                     &equipamento);
+    sqlite3_stmt *consulta = NULL;
+    int codigo = sqlite3_prepare_v2(db, sql, -1, &consulta, NULL);
 
-    if (resultado != RES_OK || equipamento.cliente_id != cliente_id) {
-        util_erro(resultado == RES_OK
-                      ? "O equipamento não pertence ao cliente informado."
-                      : util_texto_resultado(resultado));
-        return 0;
+    if (codigo == SQLITE_OK) {
+        codigo = db_vincular_texto(consulta, 1, texto, 0);
     }
-    return 1;
+    if (codigo == SQLITE_OK) {
+        codigo = sqlite3_bind_int(consulta, 2, ordem_id);
+    }
+    if (codigo == SQLITE_OK) {
+        codigo = sqlite3_step(consulta);
+    }
+    return db_finalizar(db, consulta,
+                        codigo == SQLITE_DONE ? RES_OK : db_traduzir_erro(db));
 }
 
-static void ordem_mostrar_tecnicos(sqlite3 *db)
+static Resultado ordem_executar_update_tecnico(sqlite3 *db, int ordem_id,
+                                               int tecnico_id)
 {
-    Tecnico *lista = NULL;
-    int quantidade = 0;
-    int i;
-    Resultado resultado = tecnico_listar(db, &lista, &quantidade);
+    static const char sql[] =
+        "UPDATE ordens_servico SET tecnico_id = ?1 WHERE id = ?2;";
+    sqlite3_stmt *consulta = NULL;
+    int codigo = sqlite3_prepare_v2(db, sql, -1, &consulta, NULL);
 
+    if (codigo == SQLITE_OK) codigo = sqlite3_bind_int(consulta, 1, tecnico_id);
+    if (codigo == SQLITE_OK) codigo = sqlite3_bind_int(consulta, 2, ordem_id);
+    if (codigo == SQLITE_OK) codigo = sqlite3_step(consulta);
+    return db_finalizar(db, consulta,
+                        codigo == SQLITE_DONE ? RES_OK : db_traduzir_erro(db));
+}
+
+static Resultado ordem_finalizar_transacao(sqlite3 *db, Resultado resultado)
+{
     if (resultado != RES_OK) {
-        util_erro(util_texto_resultado(resultado));
-    } else if (quantidade == 0) {
-        puts("Nenhum técnico cadastrado. Digite 0 para continuar sem técnico.");
-    } else {
-        for (i = 0; i < quantidade; i++) {
-            printf("ID %d - %s (%s)\n", lista[i].id, lista[i].nome,
-                   lista[i].especialidade);
-        }
+        return ordem_reverter(db, resultado);
     }
-    free(lista);
+    resultado = db_confirmar(db);
+    return resultado == RES_OK ? RES_OK : ordem_reverter(db, resultado);
 }
 
-static int ordem_ler_tecnico(sqlite3 *db, int *tecnico_id)
+Resultado ordem_atribuir_tecnico(sqlite3 *db, int ordem_id, int tecnico_id)
 {
-    Tecnico tecnico;
-
-    ordem_mostrar_tecnicos(db);
-    if (!ordem_ler_id("ID do técnico (0 = sem técnico): ", tecnico_id, 1)) {
-        return 0;
-    }
-    if (*tecnico_id == 0) {
-        return 1;
-    }
-    if (tecnico_buscar_por_id(db, *tecnico_id, &tecnico) != RES_OK) {
-        util_erro("Técnico não encontrado.");
-        return 0;
-    }
-    return 1;
-}
-
-static int ordem_ler_cliente(sqlite3 *db, int *cliente_id)
-{
-    Cliente cliente;
-    Resultado resultado;
-
-    if (!ordem_ler_id("ID do cliente: ", cliente_id, 0)) {
-        return 0;
-    }
-    resultado = cliente_buscar_por_id(db, *cliente_id, &cliente);
-    if (resultado != RES_OK) {
-        util_erro(util_texto_resultado(resultado));
-        return 0;
-    }
-    printf("Cliente: %s\n", cliente.nome);
-    return 1;
-}
-
-static void ordem_abrir_tela(sqlite3 *db)
-{
+    OrdemServico ordem;
+    Tecnico tecnico = {0};
+    Tecnico antigo = {0};
     char descricao[501];
-    int cliente_id;
-    int equipamento_id;
-    int tecnico_id;
-    int confirmado;
-    int id_novo;
     Resultado resultado;
 
-    if (!ordem_ler_cliente(db, &cliente_id) ||
-        !ordem_selecionar_equipamento(db, cliente_id, &equipamento_id) ||
-        !ordem_confirmar_equipamento(db, cliente_id, equipamento_id) ||
-        !ordem_ler_tecnico(db, &tecnico_id)) {
-        return;
+    if (db == NULL || ordem_id <= 0 || tecnico_id <= 0) return RES_INVALIDO;
+    resultado = ordem_iniciar_e_buscar(db, ordem_id, &ordem);
+    if (resultado != RES_OK) return resultado;
+    resultado = tecnico_buscar_por_id(db, tecnico_id, &tecnico);
+    if (resultado != RES_OK) return ordem_reverter(db, resultado);
+    if (ordem_encerrada(ordem.status) || ordem.tecnico_id == tecnico_id) {
+        return ordem_reverter(db, RES_REGRA_NEGOCIO);
     }
-    resultado = util_ler_texto_obrigatorio("Descrição do problema: ",
-                                            descricao, sizeof(descricao));
-    if (resultado != RES_OK) {
-        util_erro(util_texto_resultado(resultado));
-        return;
+    if (ordem.tecnico_id > 0) {
+        resultado = tecnico_buscar_por_id(db, ordem.tecnico_id, &antigo);
+        if (resultado != RES_OK) return ordem_reverter(db, resultado);
     }
-    resultado = util_ler_confirmacao("Abrir ordem? (S/N): ", &confirmado);
-    if (resultado != RES_OK || !confirmado) {
-        return;
+    if (ordem.tecnico_id == 0) {
+        snprintf(descricao, sizeof(descricao), "Técnico atribuído: %s",
+                 tecnico.nome);
+    } else {
+        snprintf(descricao, sizeof(descricao), "Técnico alterado: %s → %s",
+                 antigo.nome, tecnico.nome);
     }
-    resultado = ordem_abrir(db, equipamento_id, tecnico_id, descricao,
-                            &id_novo);
+    resultado = ordem_executar_update_tecnico(db, ordem_id, tecnico_id);
     if (resultado == RES_OK) {
-        printf("[OK] Ordem de serviço %d aberta.\n", id_novo);
-    } else {
-        util_erro(util_texto_resultado(resultado));
+        resultado = historico_registrar(db, ordem_id, "TECNICO", NULL, NULL,
+                                         descricao);
     }
+    return ordem_finalizar_transacao(db, resultado);
 }
 
-static void ordem_mostrar_dados(const OrdemServico *ordem)
+Resultado ordem_registrar_diagnostico(sqlite3 *db, int ordem_id,
+                                      const char *diagnostico)
 {
-    char data[20];
-    int status = os_status_de_codigo(ordem->status);
-
-    util_formatar_data(ordem->data_abertura, data, sizeof(data));
-    printf("ID: %d\nCliente: %s (ID %d)\n", ordem->id, ordem->cliente_nome,
-           ordem->cliente_id);
-    printf("Equipamento: %s %s %s, série %s (ID %d)\n",
-           equipamento_tipo_rotulo(ordem->equip_tipo), ordem->equip_marca,
-           ordem->equip_modelo, ordem->equip_serie, ordem->equipamento_id);
-    printf("Técnico: %s\n", ordem->tecnico_id == 0 ? "-" : ordem->tecnico_nome);
-    printf("Descrição: %s\nDiagnóstico: %s\n", ordem->descricao_problema,
-           ordem->diagnostico[0] == '\0' ? "-" : ordem->diagnostico);
-    printf("Situação: %s\nAbertura: %s\n",
-           status >= 0 ? os_status_rotulo((StatusOS)status) : ordem->status,
-           data);
-}
-
-static void ordem_consultar_tela(sqlite3 *db)
-{
-    OrdemServico ordem;
-    int id;
-    Resultado resultado;
-
-    if (!ordem_ler_id("ID da ordem: ", &id, 0)) {
-        return;
-    }
-    resultado = ordem_buscar_por_id(db, id, &ordem);
-    if (resultado == RES_OK) {
-        ordem_mostrar_dados(&ordem);
-    } else {
-        util_erro(util_texto_resultado(resultado));
-    }
-}
-
-static void ordem_listar_tela(sqlite3 *db, const char *status)
-{
-    OrdemServico *lista = NULL;
-    int quantidade = 0;
-    int i;
-    char id[16];
-    char data[20];
-    Resultado resultado = ordem_listar(db, status, &lista, &quantidade);
-
-    if (resultado != RES_OK) {
-        util_erro(util_texto_resultado(resultado));
-    } else if (quantidade == 0) {
-        puts("Nenhuma ordem encontrada.");
-    } else {
-        ordem_imprimir_cabecalho();
-        for (i = 0; i < quantidade; i++) {
-            ordem_imprimir_linha(&lista[i], id, sizeof(id), data, sizeof(data));
-        }
-    }
-    free(lista);
-}
-
-static void ordem_imprimir_cabecalho(void)
-{
-    util_imprimir_coluna("ID", 5);
-    util_imprimir_coluna("Cliente", 22);
-    util_imprimir_coluna("Equipamento", 28);
-    util_imprimir_coluna("Técnico", 20);
-    util_imprimir_coluna("Situação", 24);
-    util_imprimir_coluna("Abertura", 19);
-    putchar('\n');
-}
-
-static void ordem_imprimir_linha(const OrdemServico *ordem, char *id,
-                                 size_t id_tamanho, char *data,
-                                 size_t data_tamanho)
-{
-    char equipamento[124];
-    int status = os_status_de_codigo(ordem->status);
-
-    snprintf(id, id_tamanho, "%d", ordem->id);
-    snprintf(equipamento, sizeof(equipamento), "%s %s", ordem->equip_marca,
-             ordem->equip_modelo);
-    util_formatar_data(ordem->data_abertura, data, data_tamanho);
-    util_imprimir_coluna(id, 5);
-    util_imprimir_coluna(ordem->cliente_nome, 22);
-    util_imprimir_coluna(equipamento, 28);
-    util_imprimir_coluna(ordem->tecnico_id == 0 ? "-" : ordem->tecnico_nome,
-                         20);
-    util_imprimir_coluna(status >= 0
-                             ? os_status_rotulo((StatusOS)status)
-                             : ordem->status,
-                         24);
-    util_imprimir_coluna(data, 19);
-    putchar('\n');
-}
-
-static int ordem_selecionar_status(void)
-{
-    int opcao;
-    int i;
-    Resultado resultado;
-
-    for (i = 0; i < OS_STATUS_TOTAL; i++) {
-        printf("%d - %s\n", i + 1, os_status_rotulo((StatusOS)i));
-    }
-    resultado = util_ler_inteiro("Escolha a situação: ", 1, OS_STATUS_TOTAL,
-                                 &opcao);
-    return resultado == RES_OK ? opcao - 1 : -1;
-}
-
-static void ordem_status_tela(sqlite3 *db)
-{
-    int status = ordem_selecionar_status();
-
-    if (status >= 0) {
-        ordem_listar_tela(db, os_status_codigo((StatusOS)status));
-    }
-}
-
-static const char *ordem_tipo_evento_rotulo(const char *tipo)
-{
-    if (strcmp(tipo, "ABERTURA") == 0) return "Abertura";
-    if (strcmp(tipo, "STATUS") == 0) return "Situação";
-    if (strcmp(tipo, "DIAGNOSTICO") == 0) return "Diagnóstico";
-    if (strcmp(tipo, "OBSERVACAO") == 0) return "Observação";
-    if (strcmp(tipo, "TECNICO") == 0) return "Técnico";
-    if (strcmp(tipo, "PECA") == 0) return "Peça";
-    return tipo;
-}
-
-static void ordem_mostrar_evento(const EventoHistorico *evento)
-{
-    char data[20];
-    int anterior = os_status_de_codigo(evento->status_anterior);
-    int novo = os_status_de_codigo(evento->status_novo);
-
-    util_formatar_data(evento->data_hora, data, sizeof(data));
-    printf("%s - %s", data, ordem_tipo_evento_rotulo(evento->tipo_evento));
-    if (evento->status_anterior[0] != '\0' && evento->status_novo[0] != '\0') {
-        printf(": %s → %s",
-               anterior >= 0 ? os_status_rotulo((StatusOS)anterior)
-                             : evento->status_anterior,
-               novo >= 0 ? os_status_rotulo((StatusOS)novo)
-                         : evento->status_novo);
-    }
-    if (evento->descricao[0] != '\0') {
-        printf(" — %s", evento->descricao);
-    }
-    putchar('\n');
-}
-
-static void ordem_historico_tela(sqlite3 *db)
-{
-    EventoHistorico *lista = NULL;
-    int quantidade = 0;
-    int id;
-    int i;
+    static const char sql[] =
+        "UPDATE ordens_servico SET diagnostico = ?1 WHERE id = ?2;";
     OrdemServico ordem;
     Resultado resultado;
 
-    if (!ordem_ler_id("ID da ordem: ", &id, 0)) {
-        return;
+    if (db == NULL || ordem_id <= 0) return RES_INVALIDO;
+    resultado = ordem_iniciar_e_buscar(db, ordem_id, &ordem);
+    if (resultado != RES_OK) return resultado;
+    if (diagnostico == NULL || diagnostico[0] == '\0' ||
+        strlen(diagnostico) > 500) {
+        return ordem_reverter(db, RES_INVALIDO);
     }
-    resultado = ordem_buscar_por_id(db, id, &ordem);
+    if (strcmp(ordem.status, "ABERTA") == 0 || ordem_encerrada(ordem.status)) {
+        return ordem_reverter(db, RES_REGRA_NEGOCIO);
+    }
+    resultado = ordem_executar_update_texto(db, sql, ordem_id, diagnostico);
     if (resultado == RES_OK) {
-        resultado = historico_listar_por_ordem(db, id, &lista, &quantidade);
+        resultado = historico_registrar(db, ordem_id, "DIAGNOSTICO", NULL,
+                                         NULL, diagnostico);
     }
-    if (resultado != RES_OK) {
-        util_erro(util_texto_resultado(resultado));
-    } else if (quantidade == 0) {
-        puts("Nenhum evento no histórico.");
-    } else {
-        for (i = 0; i < quantidade; i++) {
-            ordem_mostrar_evento(&lista[i]);
-        }
-    }
-    free(lista);
+    return ordem_finalizar_transacao(db, resultado);
 }
 
-void menu_ordens(sqlite3 *db)
+Resultado ordem_registrar_observacao(sqlite3 *db, int ordem_id,
+                                     const char *observacao)
 {
-    int opcao;
+    OrdemServico ordem;
     Resultado resultado;
 
-    while (1) {
-        util_titulo("ORDENS DE SERVIÇO");
-        puts("1 - Abrir ordem\n2 - Consultar por ID\n3 - Listar todas");
-        puts("4 - Listar por situação\n5 - Consultar histórico\n0 - Voltar");
-        resultado = util_ler_inteiro("Escolha uma opção: ", 0, 5, &opcao);
-        if (resultado != RES_OK) {
-            return;
-        }
-        switch (opcao) {
-            case 0: return;
-            case 1: ordem_abrir_tela(db); break;
-            case 2: ordem_consultar_tela(db); break;
-            case 3: ordem_listar_tela(db, NULL); break;
-            case 4: ordem_status_tela(db); break;
-            case 5: ordem_historico_tela(db); break;
-            default: break;
-        }
+    if (db == NULL || ordem_id <= 0 || observacao == NULL ||
+        observacao[0] == '\0' || strlen(observacao) > 500) {
+        return RES_INVALIDO;
     }
+    resultado = ordem_buscar_por_id(db, ordem_id, &ordem);
+    if (resultado != RES_OK) return resultado;
+    return historico_registrar(db, ordem_id, "OBSERVACAO", NULL, NULL,
+                               observacao);
+}
+
+Resultado ordem_atualizar_status(sqlite3 *db, int ordem_id,
+                                 StatusOS novo_status,
+                                 const char *observacao)
+{
+    static const char sql[] =
+        "UPDATE ordens_servico SET status = ?1 WHERE id = ?2;";
+    OrdemServico ordem;
+    StatusOS atual;
+    Resultado resultado;
+
+    if (db == NULL || ordem_id <= 0) return RES_INVALIDO;
+    resultado = ordem_iniciar_e_buscar(db, ordem_id, &ordem);
+    if (resultado != RES_OK) return resultado;
+    atual = (StatusOS)os_status_de_codigo(ordem.status);
+    if (!ordem_transicao_permitida(atual, novo_status)) {
+        return ordem_reverter(db, RES_REGRA_NEGOCIO);
+    }
+    if (novo_status == OS_EM_DIAGNOSTICO && ordem.tecnico_id == 0) {
+        return ordem_reverter(db, RES_REGRA_NEGOCIO);
+    }
+    if (novo_status == OS_CONCLUIDA && ordem.diagnostico[0] == '\0') {
+        return ordem_reverter(db, RES_REGRA_NEGOCIO);
+    }
+    if (observacao != NULL && strlen(observacao) > 500) {
+        return ordem_reverter(db, RES_INVALIDO);
+    }
+    if (novo_status == OS_CANCELADA &&
+        (observacao == NULL || observacao[0] == '\0')) {
+        return ordem_reverter(db, RES_INVALIDO);
+    }
+    resultado = ordem_executar_update_texto(db, sql, ordem_id,
+                                            os_status_codigo(novo_status));
+    if (resultado == RES_OK) {
+        resultado = historico_registrar(db, ordem_id, "STATUS",
+                                         ordem.status,
+                                         os_status_codigo(novo_status),
+                                         observacao);
+    }
+    return ordem_finalizar_transacao(db, resultado);
 }

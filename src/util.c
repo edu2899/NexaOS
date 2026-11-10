@@ -364,6 +364,8 @@ const char *util_texto_resultado(Resultado resultado)
             return "Não há memória suficiente.";
         case RES_ERRO_ARQUIVO:
             return "Não foi possível ler ou acessar o arquivo.";
+        case RES_REGRA_NEGOCIO:
+            return "Operação não permitida pelas regras do sistema (verifique situação, técnico e diagnóstico da ordem).";
         default:
             return "Resultado desconhecido.";
     }

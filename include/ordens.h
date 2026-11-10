@@ -36,11 +36,20 @@ typedef struct OrdemServico {
 const char *os_status_codigo(StatusOS status);
 const char *os_status_rotulo(StatusOS status);
 int os_status_de_codigo(const char *codigo);
+int ordem_transicao_permitida(StatusOS atual, StatusOS novo_status);
+int ordem_encerrada(const char *status_codigo);
 Resultado ordem_abrir(sqlite3 *db, int equipamento_id, int tecnico_id,
                       const char *descricao_problema, int *id_novo);
 Resultado ordem_buscar_por_id(sqlite3 *db, int id, OrdemServico *saida);
 Resultado ordem_listar(sqlite3 *db, const char *status_codigo,
                        OrdemServico **lista, int *quantidade);
-void menu_ordens(sqlite3 *db);
+Resultado ordem_atribuir_tecnico(sqlite3 *db, int ordem_id, int tecnico_id);
+Resultado ordem_registrar_diagnostico(sqlite3 *db, int ordem_id,
+                                      const char *diagnostico);
+Resultado ordem_registrar_observacao(sqlite3 *db, int ordem_id,
+                                     const char *observacao);
+Resultado ordem_atualizar_status(sqlite3 *db, int ordem_id,
+                                 StatusOS novo_status,
+                                 const char *observacao);
 
 #endif

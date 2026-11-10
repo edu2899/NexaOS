@@ -54,7 +54,7 @@ static int preparar_banco(sqlite3 **db, int *equipamento_id, int *tecnico_a,
         return 0;
     }
     TESTE_VERIFICAR(criar_dados(*db, equipamento_id, tecnico_a, tecnico_b),
-                    "criar cliente, equipamento e técnicos");
+                    "criar cliente, equipamento e tecnicos");
     return 1;
 }
 
@@ -74,13 +74,13 @@ static void testar_matriz(void)
                                                OS_EM_DIAGNOSTICO),
                     "ABERTA permite EM_DIAGNOSTICO");
     TESTE_VERIFICAR(!ordem_transicao_permitida(OS_ABERTA, OS_CONCLUIDA),
-                    "ABERTA não permite CONCLUIDA");
+                    "ABERTA nao permite CONCLUIDA");
     TESTE_VERIFICAR(!ordem_transicao_permitida(OS_ENTREGUE, OS_ABERTA) &&
                     !ordem_transicao_permitida(OS_CANCELADA, OS_ABERTA),
-                    "ENTREGUE e CANCELADA não têm destinos");
+                    "ENTREGUE e CANCELADA nao tem destinos");
     TESTE_VERIFICAR(ordem_transicao_permitida(OS_CONCLUIDA, OS_ENTREGUE),
                     "CONCLUIDA permite ENTREGUE");
-    TESTE_VERIFICAR(total == 15, "matriz tem 15 transições");
+    TESTE_VERIFICAR(total == 15, "matriz tem 15 transicoes");
 }
 
 static int abrir_teste(sqlite3 *db, int equipamento_id, int tecnico_id,
@@ -98,15 +98,15 @@ static void testar_inicio_fluxo(sqlite3 *db, int id, int tecnico_a)
 {
     TESTE_VERIFICAR(ordem_atualizar_status(db, id, OS_EM_DIAGNOSTICO, NULL) ==
                         RES_REGRA_NEGOCIO,
-                    "impedir diagnóstico sem técnico");
+                    "impedir diagnostico sem tecnico");
     TESTE_VERIFICAR(ordem_atribuir_tecnico(db, id, tecnico_a) == RES_OK,
-                    "atribuir técnico");
+                    "atribuir tecnico");
     TESTE_VERIFICAR(ordem_atualizar_status(db, id, OS_EM_DIAGNOSTICO, NULL) ==
                         RES_OK,
-                    "iniciar diagnóstico com técnico");
+                    "iniciar diagnostico com tecnico");
     TESTE_VERIFICAR(ordem_registrar_diagnostico(db, id, "Placa danificada") ==
                         RES_OK,
-                    "registrar diagnóstico");
+                    "registrar diagnostico");
 }
 
 static void testar_historico_fluxo(sqlite3 *db, int id)
@@ -126,7 +126,7 @@ static void testar_historico_fluxo(sqlite3 *db, int id)
     TESTE_VERIFICAR(historico_listar_por_ordem(db, id, &eventos,
                                                 &quantidade) == RES_OK &&
                     quantidade == 9,
-                    "histórico contém eventos do fluxo");
+                    "historico contem eventos do fluxo");
     if (quantidade != 9) {
         free(eventos);
         return;
@@ -135,13 +135,13 @@ static void testar_historico_fluxo(sqlite3 *db, int id)
                     strcmp(eventos[1].tipo_evento, "TECNICO") == 0 &&
                     strcmp(eventos[2].tipo_evento, "STATUS") == 0 &&
                     strcmp(eventos[3].tipo_evento, "DIAGNOSTICO") == 0,
-                    "histórico inicia na ordem correta");
+                    "historico inicia na ordem correta");
     for (i = 0; i < 6; i++) {
         int indice = i == 0 ? 2 : i + 3;
         TESTE_VERIFICAR(strcmp(eventos[indice].status_anterior,
                                anteriores[i]) == 0 &&
                         strcmp(eventos[indice].status_novo, novos[i]) == 0,
-                        "histórico registra situação na ordem correta");
+                        "historico registra situacao na ordem correta");
     }
     free(eventos);
 }
@@ -161,7 +161,7 @@ static void testar_fluxo_completo(sqlite3 *db, int equipamento_id,
     for (i = 1; i < (int)(sizeof(etapas) / sizeof(etapas[0])); i++) {
         TESTE_VERIFICAR(ordem_atualizar_status(db, id, etapas[i], NULL) ==
                             RES_OK,
-                        "avançar etapa do fluxo");
+                        "avancar etapa do fluxo");
     }
     TESTE_VERIFICAR(ordem_buscar_por_id(db, id, &ordem) == RES_OK &&
                     strcmp(ordem.status, "ENTREGUE") == 0,
@@ -179,14 +179,14 @@ static void testar_rejeicoes_status(sqlite3 *db, int equipamento_id)
 
     TESTE_VERIFICAR(ordem_atualizar_status(db, id_aberta, OS_CONCLUIDA, NULL)
                         == RES_REGRA_NEGOCIO,
-                    "rejeitar transição inválida");
+                    "rejeitar transicao invalida");
     TESTE_VERIFICAR(ordem_buscar_por_id(db, id_aberta, &ordem) == RES_OK &&
                     strcmp(ordem.status, "ABERTA") == 0,
-                    "transição inválida preserva situação");
+                    "transicao invalida preserva situacao");
     TESTE_VERIFICAR(historico_listar_por_ordem(db, id_aberta, &eventos,
                                                 &quantidade) == RES_OK &&
                     quantidade == 1,
-                    "transição inválida não grava histórico");
+                    "transicao invalida nao grava historico");
     free(eventos);
     TESTE_VERIFICAR(ordem_atualizar_status(db, id_aberta, OS_CANCELADA, NULL)
                         == RES_INVALIDO,
@@ -209,7 +209,7 @@ static void testar_cancelamento(sqlite3 *db, int equipamento_id,
                     quantidade == 3 &&
                     strcmp(eventos[2].descricao,
                            "Solicitado pelo cliente") == 0,
-                    "motivo aparece no histórico");
+                    "motivo aparece no historico");
     free(eventos);
 }
 
@@ -225,25 +225,25 @@ static void testar_atribuicao_tecnico(sqlite3 *db, int equipamento_id,
                         RES_NAO_ENCONTRADO &&
                     ordem_atribuir_tecnico(db, id_aberta, 999999) ==
                         RES_NAO_ENCONTRADO,
-                    "rejeitar ordem ou técnico inexistente");
+                    "rejeitar ordem ou tecnico inexistente");
     TESTE_VERIFICAR(ordem_atribuir_tecnico(db, ordem_final, tecnico_a) ==
                         RES_REGRA_NEGOCIO,
-                    "rejeitar técnico repetido na ordem");
+                    "rejeitar tecnico repetido na ordem");
     TESTE_VERIFICAR(ordem_atribuir_tecnico(db, ordem_final, tecnico_b) ==
                         RES_REGRA_NEGOCIO,
-                    "rejeitar alteração em ordem encerrada");
+                    "rejeitar alteracao em ordem encerrada");
     TESTE_VERIFICAR(ordem_atribuir_tecnico(db, id_aberta, tecnico_a) == RES_OK &&
                     ordem_atribuir_tecnico(db, id_aberta, tecnico_a) ==
                         RES_REGRA_NEGOCIO &&
                     ordem_atribuir_tecnico(db, id_aberta, tecnico_b) == RES_OK,
-                    "atribuir, rejeitar repetição e trocar técnico");
+                    "atribuir, rejeitar repeticao e trocar tecnico");
     eventos = NULL;
     quantidade = 0;
     TESTE_VERIFICAR(historico_listar_por_ordem(db, id_aberta, &eventos,
                                                 &quantidade) == RES_OK &&
                     quantidade == 3 &&
                     strstr(eventos[2].descricao, "alterado") != NULL,
-                    "troca de técnico aparece no histórico");
+                    "troca de tecnico aparece no historico");
     free(eventos);
 }
 
@@ -265,31 +265,31 @@ static void testar_diagnostico_observacao(sqlite3 *db, int equipamento_id,
 
     TESTE_VERIFICAR(ordem_registrar_diagnostico(db, id_aberta, "texto") ==
                         RES_REGRA_NEGOCIO,
-                    "diagnóstico não permitido em ABERTA");
+                    "diagnostico nao permitido em ABERTA");
     TESTE_VERIFICAR(ordem_registrar_diagnostico(db, id_aberta, "") ==
                         RES_INVALIDO,
-                    "diagnóstico vazio inválido");
+                    "diagnostico vazio invalido");
     TESTE_VERIFICAR(ordem_registrar_diagnostico(db, ordem_final, "Novo") ==
                         RES_REGRA_NEGOCIO,
-                    "diagnóstico não permitido em ordem encerrada");
+                    "diagnostico nao permitido em ordem encerrada");
     TESTE_VERIFICAR(ordem_registrar_observacao(db, ordem_final,
                                                "Observação após entrega") ==
                         RES_OK,
-                    "observação permitida em ordem encerrada");
+                    "observacao permitida em ordem encerrada");
     TESTE_VERIFICAR(ordem_registrar_observacao(db, id_aberta,
                                                "Observação em aberto") ==
                         RES_OK,
-                    "observação permitida em ordem aberta");
+                    "observacao permitida em ordem aberta");
     TESTE_VERIFICAR(ordem_registrar_observacao(db, 999999, "Observação") ==
                         RES_NAO_ENCONTRADO &&
                     ordem_registrar_observacao(db, id_aberta, "") ==
                         RES_INVALIDO,
-                    "validar ordem e observação");
+                    "validar ordem e observacao");
     TESTE_VERIFICAR(ordem_atualizar_status(db, id_reparo,
                                            OS_EM_DIAGNOSTICO, NULL) == RES_OK &&
                     ordem_registrar_diagnostico(db, id_reparo, "Falha") ==
                         RES_OK,
-                    "registrar diagnóstico após transição");
+                    "registrar diagnostico apos transicao");
 }
 
 static void testar_conclusao_e_rollback(sqlite3 *db, int equipamento_id,
@@ -311,22 +311,22 @@ static void testar_conclusao_e_rollback(sqlite3 *db, int equipamento_id,
                         RES_OK &&
                     ordem_atualizar_status(db, id, OS_EM_REPARO, NULL) ==
                         RES_OK,
-                    "preparar ordem para validar conclusão");
+                    "preparar ordem para validar conclusao");
     TESTE_VERIFICAR(ordem_atualizar_status(db, id, OS_CONCLUIDA, NULL) ==
                         RES_REGRA_NEGOCIO,
-                    "impedir conclusão sem diagnóstico");
+                    "impedir conclusao sem diagnostico");
     TESTE_VERIFICAR(sqlite3_exec(db, trigger, NULL, NULL, NULL) == SQLITE_OK,
-                    "criar trigger de rollback de situação");
+                    "criar trigger de rollback de situacao");
     TESTE_VERIFICAR(ordem_atualizar_status(db, id, OS_AGUARDANDO_PECA, NULL)
                         != RES_OK &&
                     ordem_buscar_por_id(db, id, &ordem) == RES_OK &&
                     strcmp(ordem.status, "EM_REPARO") == 0,
-                    "rollback preserva situação após falha do histórico");
+                    "rollback preserva situacao apos falha do historico");
     codigo = sqlite3_exec(db, "DROP TRIGGER falha_status;", NULL, NULL, NULL);
     TESTE_VERIFICAR(codigo == SQLITE_OK, "remover trigger de rollback");
     TESTE_VERIFICAR(ordem_atualizar_status(db, id, OS_AGUARDANDO_PECA, NULL)
                         == RES_OK,
-                    "atualização funciona após rollback");
+                    "atualizacao funciona apos rollback");
 }
 
 static void testar_persistencia(sqlite3 **db, int ordem_id)
@@ -341,11 +341,11 @@ static void testar_persistencia(sqlite3 **db, int ordem_id)
                     "reabrir banco de fluxo");
     TESTE_VERIFICAR(ordem_buscar_por_id(*db, ordem_id, &ordem) == RES_OK &&
                     strcmp(ordem.status, "ENTREGUE") == 0,
-                    "situação persiste após reabrir");
+                    "situacao persiste apos reabrir");
     TESTE_VERIFICAR(historico_listar_por_ordem(*db, ordem_id, &eventos,
                                                 &quantidade) == RES_OK &&
                     quantidade == 10,
-                    "histórico persiste após reabrir");
+                    "historico persiste apos reabrir");
     free(eventos);
 }
 

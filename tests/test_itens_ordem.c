@@ -143,24 +143,24 @@ static void testar_aberta_e_entradas_invalidas(sqlite3 *db, int ordem_aberta,
 
     TESTE_VERIFICAR(item_ordem_usar_peca(db, ordem_aberta, peca_id, 1) ==
                         RES_REGRA_NEGOCIO,
-                    "OS ABERTA não permite usar peça");
+                    "OS ABERTA nao permite usar peca");
     TESTE_VERIFICAR(contagens_iguais(antes, obter_contagens(db, peca_id)),
-                    "uso em OS ABERTA não altera registros");
+                    "uso em OS ABERTA nao altera registros");
     antes = obter_contagens(db, peca_id);
     TESTE_VERIFICAR(item_ordem_usar_peca(db, 999999, peca_id, 1) ==
                         RES_NAO_ENCONTRADO &&
                     item_ordem_usar_peca(db, ordem_valida, 999999, 1) ==
                         RES_NAO_ENCONTRADO,
-                    "rejeitar OS ou peça inexistente");
+                    "rejeitar OS ou peca inexistente");
     TESTE_VERIFICAR(item_ordem_usar_peca(db, ordem_valida, peca_id, 0) ==
                         RES_INVALIDO &&
                     item_ordem_usar_peca(db, ordem_valida, peca_id, -1) ==
                         RES_INVALIDO &&
                     item_ordem_usar_peca(db, ordem_valida, peca_id, 100001) ==
                         RES_INVALIDO,
-                    "rejeitar quantidades inválidas");
+                    "rejeitar quantidades invalidas");
     TESTE_VERIFICAR(contagens_iguais(antes, obter_contagens(db, peca_id)),
-                    "falhas de validação não alteram registros");
+                    "falhas de validacao nao alteram registros");
 }
 
 static void verificar_item(sqlite3 *db, int ordem_id, int peca_id)
@@ -176,13 +176,13 @@ static void verificar_item(sqlite3 *db, int ordem_id, int peca_id)
                     strcmp(lista[0].peca_codigo, "MEM16") == 0 &&
                     strcmp(lista[0].peca_nome, "Memória 16 GB") == 0 &&
                     lista[0].quantidade == 4,
-                    "item usado lista código, nome e quantidade");
+                    "item usado lista codigo, nome e quantidade");
     free(lista);
     resultado = historico_listar_por_ordem(db, ordem_id, &eventos,
                                             &qtd_eventos);
     TESTE_VERIFICAR(resultado == RES_OK && qtd_eventos > 0 &&
                     strcmp(eventos[qtd_eventos - 1].tipo_evento, "PECA") == 0,
-                    "uso de peça registra evento PECA");
+                    "uso de peca registra evento PECA");
     free(eventos);
 }
 
@@ -198,7 +198,7 @@ static void testar_uso_inicial(sqlite3 *db, int ordem_id, int peca_id)
                     "usar quatro unidades em OS APROVADA");
     TESTE_VERIFICAR(peca_buscar_por_id(db, peca_id, &peca) == RES_OK &&
                     peca.quantidade == 6,
-                    "baixa de estoque após uso");
+                    "baixa de estoque apos uso");
     snprintf(motivo, sizeof(motivo), "Uso na OS %d", ordem_id);
     TESTE_VERIFICAR(estoque_listar_movimentacoes(db, peca_id, &movimentos,
                                                   &quantidade) == RES_OK &&
@@ -206,7 +206,7 @@ static void testar_uso_inicial(sqlite3 *db, int ordem_id, int peca_id)
                     strcmp(movimentos[1].tipo, "SAIDA") == 0 &&
                     movimentos[1].ordem_id == ordem_id &&
                     strcmp(movimentos[1].motivo, motivo) == 0,
-                    "movimentação de saída vinculada à OS");
+                    "movimentacao de saida vinculada a OS");
     free(movimentos);
     verificar_item(db, ordem_id, peca_id);
     antes = obter_contagens(db, peca_id);
@@ -214,7 +214,7 @@ static void testar_uso_inicial(sqlite3 *db, int ordem_id, int peca_id)
                         RES_ESTOQUE_INSUFICIENTE,
                     "estoque insuficiente rejeita uso");
     TESTE_VERIFICAR(contagens_iguais(antes, obter_contagens(db, peca_id)),
-                    "estoque insuficiente não altera dados");
+                    "estoque insuficiente nao altera dados");
 }
 
 static void testar_situacoes_permitidas(sqlite3 *db, int ordem_id,
@@ -242,7 +242,7 @@ static void testar_situacoes_permitidas(sqlite3 *db, int ordem_id,
         TESTE_VERIFICAR(resultado == RES_OK && quantidade == 1 &&
                         baixas[0].id == peca_id &&
                         baixas[0].quantidade == 0,
-                        "peça zerada aparece no estoque baixo");
+                        "peca zerada aparece no estoque baixo");
         free(baixas);
     }
 }
@@ -255,10 +255,10 @@ static void testar_itens_vazios(sqlite3 *db, int ordem_id)
     TESTE_VERIFICAR(item_ordem_listar(db, ordem_id, &lista, &quantidade) ==
                         RES_OK &&
                     lista == NULL && quantidade == 0,
-                    "OS sem peças retorna lista vazia");
+                    "OS sem pecas retorna lista vazia");
     TESTE_VERIFICAR(item_ordem_listar(db, 999999, &lista, &quantidade) ==
                         RES_NAO_ENCONTRADO,
-                    "listar peças de OS inexistente");
+                    "listar pecas de OS inexistente");
     free(lista);
 }
 
@@ -272,12 +272,12 @@ static void testar_fechamento_e_cancelamento(sqlite3 *db, int equipamento_id,
                         == RES_OK &&
                     item_ordem_usar_peca(db, ordem_id, peca_id, 1) ==
                         RES_REGRA_NEGOCIO,
-                    "CONCLUIDA rejeita uso de peça");
+                    "CONCLUIDA rejeita uso de peca");
     TESTE_VERIFICAR(ordem_atualizar_status(db, ordem_id, OS_ENTREGUE, NULL)
                         == RES_OK &&
                     item_ordem_usar_peca(db, ordem_id, peca_id, 1) ==
                         RES_REGRA_NEGOCIO,
-                    "ENTREGUE rejeita uso de peça");
+                    "ENTREGUE rejeita uso de peca");
     TESTE_VERIFICAR(ordem_abrir(db, equipamento_id, 0, "Cancelar",
                                 &ordem_cancelada) == RES_OK &&
                     ordem_atualizar_status(db, ordem_cancelada, OS_CANCELADA,
@@ -303,7 +303,7 @@ static void testar_rollback_trigger(sqlite3 *db, int ordem_id, int peca_id,
     if (!deve_sucesso) {
         TESTE_VERIFICAR(item_ordem_usar_peca(db, ordem_id, peca_id, 2) !=
                             RES_OK,
-                        "falha injetada rejeita uso da peça");
+                        "falha injetada rejeita uso da peca");
         TESTE_VERIFICAR(contagens_iguais(antes, obter_contagens(db, peca_id)),
                         "rollback restaura estoque e todas as contagens");
     }
@@ -312,7 +312,7 @@ static void testar_rollback_trigger(sqlite3 *db, int ordem_id, int peca_id,
     if (deve_sucesso) {
         TESTE_VERIFICAR(item_ordem_usar_peca(db, ordem_id, peca_id, 2) ==
                             RES_OK,
-                        "uso funciona após remover trigger de histórico");
+                        "uso funciona apos remover trigger de historico");
     }
 }
 
@@ -328,7 +328,7 @@ static void testar_listagem_ordenada(sqlite3 *db, int ordem_id)
     if (quantidade == 5) {
         for (i = 1; i < quantidade; i++) {
             TESTE_VERIFICAR(lista[i - 1].id < lista[i].id,
-                            "itens em ordem cronológica");
+                            "itens em ordem cronologica");
         }
     }
     free(lista);
@@ -352,7 +352,7 @@ static void testar_invariante(sqlite3 *db)
         incorretas = -1;
     }
     TESTE_VERIFICAR(incorretas == 0,
-                    "estoque corresponde às entradas menos saídas");
+                    "estoque corresponde as entradas menos saidas");
 }
 
 static void testar_persistencia(sqlite3 **db, int ordem_id, int peca_id)
@@ -371,17 +371,17 @@ static void testar_persistencia(sqlite3 **db, int ordem_id, int peca_id)
     TESTE_VERIFICAR(1, "reabrir banco de itens");
     TESTE_VERIFICAR(peca_buscar_por_id(*db, peca_id, &peca) == RES_OK &&
                     peca.quantidade == 8,
-                    "estoque persiste após reabrir");
+                    "estoque persiste apos reabrir");
     TESTE_VERIFICAR(item_ordem_listar(*db, ordem_id, &lista, &quantidade) ==
                         RES_OK &&
                     quantidade == 5,
-                    "itens persistem após reabrir");
+                    "itens persistem apos reabrir");
     free(lista);
     quantidade = 0;
     TESTE_VERIFICAR(estoque_listar_movimentacoes(*db, peca_id, &movimentos,
                                                   &quantidade) == RES_OK &&
                     quantidade == 7,
-                    "movimentações persistem após reabrir");
+                    "movimentacoes persistem apos reabrir");
     free(movimentos);
 }
 
@@ -414,7 +414,7 @@ static void executar_testes(sqlite3 *db, DadosTeste *dados)
                             "criar trigger de falha em item",
                             trigger_item, drop_item, 0);
     testar_rollback_trigger(db, dados->ordem_aprovada, dados->peca_id,
-                            "criar trigger de falha em histórico",
+                            "criar trigger de falha em historico",
                             trigger_hist, drop_hist, 1);
     testar_fechamento_e_cancelamento(db, dados->equipamento_id,
                                      dados->ordem_aprovada, dados->peca_id);

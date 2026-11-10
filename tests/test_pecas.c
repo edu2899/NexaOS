@@ -40,10 +40,10 @@ static void testar_duplicados(sqlite3 *db, Peca *peca)
 
     snprintf(peca->codigo, sizeof(peca->codigo), "%s", "SSD480");
     TESTE_VERIFICAR(peca_cadastrar(db, peca, &id_novo) == RES_DUPLICADO,
-                    "rejeitar código duplicado em maiúsculas");
+                    "rejeitar codigo duplicado em maiusculas");
     snprintf(peca->codigo, sizeof(peca->codigo), "%s", "ssd480");
     TESTE_VERIFICAR(peca_cadastrar(db, peca, &id_novo) == RES_DUPLICADO,
-                    "rejeitar código duplicado em minúsculas");
+                    "rejeitar codigo duplicado em minusculas");
 }
 
 static void testar_cadastro(sqlite3 *db, int *ssd_id, int *zero_id,
@@ -58,10 +58,10 @@ static void testar_cadastro(sqlite3 *db, int *ssd_id, int *zero_id,
     peca.quantidade = 10;
     peca.estoque_minimo = 3;
     TESTE_VERIFICAR(peca_cadastrar(db, &peca, ssd_id) == RES_OK,
-                    "cadastrar peça com estoque inicial");
+                    "cadastrar peca com estoque inicial");
     TESTE_VERIFICAR(peca_buscar_por_id(db, *ssd_id, &peca) == RES_OK &&
                     strcmp(peca.codigo, "SSD480") == 0,
-                    "normalizar código para maiúsculas");
+                    "normalizar codigo para maiusculas");
     TESTE_VERIFICAR(estoque_listar_movimentacoes(db, *ssd_id, &movimentos,
                                                   &quantidade) == RES_OK &&
                     quantidade == 1 &&
@@ -71,15 +71,15 @@ static void testar_cadastro(sqlite3 *db, int *ssd_id, int *zero_id,
                     "registrar movimento do estoque inicial");
     free(movimentos);
     TESTE_VERIFICAR(inserir_peca(db, "zero", "Sem estoque", 0, 0, zero_id),
-                    "cadastrar peça sem estoque inicial");
+                    "cadastrar peca sem estoque inicial");
     movimentos = NULL;
     quantidade = -1;
     TESTE_VERIFICAR(estoque_listar_movimentacoes(db, *zero_id, &movimentos,
                                                   &quantidade) == RES_OK &&
                     quantidade == 0 && movimentos == NULL,
-                    "estoque inicial zero não gera movimento");
+                    "estoque inicial zero nao gera movimento");
     TESTE_VERIFICAR(inserir_peca(db, "mouse", "Mouse", 4, 2, mouse_id),
-                    "cadastrar peça acima do mínimo");
+                    "cadastrar peca acima do minimo");
     testar_duplicados(db, &peca);
 }
 
@@ -91,7 +91,7 @@ static void testar_validacoes(sqlite3 *db)
     snprintf(peca.nome, sizeof(peca.nome), "%s", "Peça");
     peca.quantidade = 1;
     TESTE_VERIFICAR(peca_validar(&peca) == RES_INVALIDO,
-                    "rejeitar código vazio");
+                    "rejeitar codigo vazio");
     snprintf(peca.codigo, sizeof(peca.codigo), "%s", "VALIDA");
     peca.nome[0] = '\0';
     TESTE_VERIFICAR(peca_validar(&peca) == RES_INVALIDO,
@@ -103,13 +103,13 @@ static void testar_validacoes(sqlite3 *db)
     peca.quantidade = 0;
     peca.estoque_minimo = -1;
     TESTE_VERIFICAR(peca_validar(&peca) == RES_INVALIDO,
-                    "rejeitar mínimo negativo");
+                    "rejeitar minimo negativo");
     peca.estoque_minimo = 0;
     peca.quantidade = 100001;
     TESTE_VERIFICAR(peca_validar(&peca) == RES_INVALIDO,
                     "rejeitar estoque inicial acima do limite");
     TESTE_VERIFICAR(peca_cadastrar(db, &peca, &id_novo) == RES_INVALIDO,
-                    "cadastro inválido não grava peça");
+                    "cadastro invalido nao grava peca");
 }
 
 static void testar_buscas(sqlite3 *db, int ssd_id)
@@ -118,15 +118,15 @@ static void testar_buscas(sqlite3 *db, int ssd_id)
 
     TESTE_VERIFICAR(peca_buscar_por_id(db, ssd_id, &peca) == RES_OK &&
                     strcmp(peca.nome, "SSD 480 GB") == 0,
-                    "buscar peça por id");
+                    "buscar peca por id");
     TESTE_VERIFICAR(peca_buscar_por_codigo(db, "ssd480", &peca) == RES_OK &&
                     peca.id == ssd_id,
-                    "buscar código sem diferenciar caixa");
+                    "buscar codigo sem diferenciar caixa");
     TESTE_VERIFICAR(peca_buscar_por_id(db, 999999, &peca) ==
                         RES_NAO_ENCONTRADO &&
                     peca_buscar_por_codigo(db, "INEXISTENTE", &peca) ==
                         RES_NAO_ENCONTRADO,
-                    "rejeitar peças inexistentes");
+                    "rejeitar pecas inexistentes");
 }
 
 static void testar_entrada(sqlite3 *db, int ssd_id)
@@ -142,10 +142,10 @@ static void testar_entrada(sqlite3 *db, int ssd_id)
                     peca_registrar_entrada(db, ssd_id, -1, NULL) == RES_INVALIDO &&
                     peca_registrar_entrada(db, ssd_id, 100001, NULL) ==
                         RES_INVALIDO,
-                    "rejeitar quantidades de entrada inválidas");
+                    "rejeitar quantidades de entrada invalidas");
     TESTE_VERIFICAR(peca_registrar_entrada(db, 999999, 1, NULL) ==
                         RES_NAO_ENCONTRADO,
-                    "entrada em peça inexistente");
+                    "entrada em peca inexistente");
 }
 
 static void testar_saida(sqlite3 *db, int ssd_id)
@@ -154,32 +154,32 @@ static void testar_saida(sqlite3 *db, int ssd_id)
     int movimentos_antes = contar_movimentos(db);
 
     TESTE_VERIFICAR(peca_registrar_saida(db, ssd_id, 1, "") == RES_INVALIDO,
-                    "saída manual exige motivo");
+                    "saida manual exige motivo");
     TESTE_VERIFICAR(peca_registrar_saida(db, ssd_id, 0, "Inválida") ==
                         RES_INVALIDO &&
                     peca_registrar_saida(db, ssd_id, 100001, "Inválida") ==
                         RES_INVALIDO,
-                    "rejeitar quantidades de saída inválidas");
+                    "rejeitar quantidades de saida invalidas");
     TESTE_VERIFICAR(peca_registrar_saida(db, ssd_id, 3, "Uso") == RES_OK &&
                     peca_buscar_por_id(db, ssd_id, &peca) == RES_OK &&
                     peca.quantidade == 12,
-                    "registrar saída e atualizar quantidade");
+                    "registrar saida e atualizar quantidade");
     movimentos_antes = contar_movimentos(db);
     TESTE_VERIFICAR(peca_registrar_saida(db, ssd_id, 13, "Excesso") ==
                         RES_ESTOQUE_INSUFICIENTE,
-                    "rejeitar saída acima do disponível");
+                    "rejeitar saida acima do disponivel");
     TESTE_VERIFICAR(peca_buscar_por_id(db, ssd_id, &peca) == RES_OK &&
                     peca.quantidade == 12 &&
                     contar_movimentos(db) == movimentos_antes,
-                    "saída insuficiente não altera estoque nem histórico");
+                    "saida insuficiente nao altera estoque nem historico");
     TESTE_VERIFICAR(peca_registrar_saida(db, ssd_id, 12, "Baixa total") ==
                         RES_OK &&
                     peca_buscar_por_id(db, ssd_id, &peca) == RES_OK &&
                     peca.quantidade == 0,
-                    "saída exata deixa estoque zerado");
+                    "saida exata deixa estoque zerado");
     TESTE_VERIFICAR(peca_registrar_saida(db, 999999, 1, "Peça ausente") ==
                         RES_NAO_ENCONTRADO,
-                    "saída de peça inexistente");
+                    "saida de peca inexistente");
 }
 
 static void testar_listas(sqlite3 *db, int ssd_id)
@@ -190,26 +190,26 @@ static void testar_listas(sqlite3 *db, int ssd_id)
     Resultado resultado = peca_listar(db, &lista, &quantidade);
 
     TESTE_VERIFICAR(resultado == RES_OK && quantidade == 3,
-                    "listar todas as peças");
+                    "listar todas as pecas");
     if (quantidade == 3) {
         TESTE_VERIFICAR(strcmp(lista[0].codigo, "MOUSE") == 0 &&
                         strcmp(lista[1].codigo, "SSD480") == 0 &&
                         strcmp(lista[2].codigo, "ZERO") == 0,
-                        "peças ordenadas por código");
+                        "pecas ordenadas por codigo");
     }
     free(lista);
     lista = NULL;
     quantidade = 0;
     resultado = peca_listar_estoque_baixo(db, &lista, &quantidade);
     TESTE_VERIFICAR(resultado == RES_OK && quantidade == 2,
-                    "listar estoque baixo incluindo igual ao mínimo");
+                    "listar estoque baixo incluindo igual ao minimo");
     if (quantidade == 2) {
         for (i = 0; i < quantidade; i++) {
             TESTE_VERIFICAR(lista[i].quantidade <= lista[i].estoque_minimo,
-                            "estoque baixo respeita mínimo");
+                            "estoque baixo respeita minimo");
         }
         TESTE_VERIFICAR(lista[0].id == ssd_id,
-                        "estoque baixo inclui peça abaixo do mínimo");
+                        "estoque baixo inclui peca abaixo do minimo");
     }
     free(lista);
 }
@@ -222,21 +222,21 @@ static void testar_movimentacoes(sqlite3 *db, int ssd_id)
                                                         &quantidade);
 
     TESTE_VERIFICAR(resultado == RES_OK && quantidade == 4,
-                    "listar movimentos da peça");
+                    "listar movimentos da peca");
     if (quantidade == 4) {
         TESTE_VERIFICAR(strcmp(lista[0].tipo, "ENTRADA") == 0 &&
                         lista[0].quantidade == 10 &&
                         strcmp(lista[1].tipo, "ENTRADA") == 0 &&
                         strcmp(lista[2].tipo, "SAIDA") == 0 &&
                         strcmp(lista[3].tipo, "SAIDA") == 0,
-                        "movimentações em ordem cronológica");
+                        "movimentacoes em ordem cronologica");
     }
     free(lista);
     lista = NULL;
     quantidade = 0;
     resultado = estoque_listar_movimentacoes(db, 0, &lista, &quantidade);
     TESTE_VERIFICAR(resultado == RES_OK && quantidade == 5,
-                    "listar movimentações de todas as peças");
+                    "listar movimentacoes de todas as pecas");
     free(lista);
 }
 
@@ -249,7 +249,7 @@ static void testar_saida_em_transacao(sqlite3 *db, int ssd_id)
     int total_antes = contar_movimentos(db);
 
     TESTE_VERIFICAR(peca_registrar_entrada(db, ssd_id, 4, "Teste") == RES_OK,
-                    "preparar estoque para transação manual");
+                    "preparar estoque para transacao manual");
     total_antes = contar_movimentos(db);
     resultado = db_iniciar_transacao(db);
     if (resultado == RES_OK) {
@@ -257,7 +257,7 @@ static void testar_saida_em_transacao(sqlite3 *db, int ssd_id)
         if (db_desfazer(db) != RES_OK) resultado = RES_ERRO_BANCO;
     }
     TESTE_VERIFICAR(resultado == RES_OK,
-                    "saída em transação não confirma sozinha");
+                    "saida em transacao nao confirma sozinha");
     TESTE_VERIFICAR(peca_buscar_por_id(db, ssd_id, &peca) == RES_OK &&
                     peca.quantidade == 4 &&
                     contar_movimentos(db) == total_antes,
@@ -265,7 +265,7 @@ static void testar_saida_em_transacao(sqlite3 *db, int ssd_id)
     TESTE_VERIFICAR(estoque_listar_movimentacoes(db, ssd_id, &lista,
                                                   &quantidade) == RES_OK &&
                     quantidade == 5,
-                    "movimentos permanecem após rollback manual");
+                    "movimentos permanecem apos rollback manual");
     free(lista);
 }
 
@@ -278,17 +278,17 @@ static void testar_rollback_saida(sqlite3 *db, int ssd_id)
         "BEGIN SELECT RAISE(ABORT, 'falha forcada'); END;";
     int codigo = sqlite3_exec(db, trigger, NULL, NULL, NULL);
 
-    TESTE_VERIFICAR(codigo == SQLITE_OK, "criar trigger de falha de saída");
+    TESTE_VERIFICAR(codigo == SQLITE_OK, "criar trigger de falha de saida");
     if (codigo != SQLITE_OK) return;
     TESTE_VERIFICAR(peca_registrar_saida(db, ssd_id, 1, "Falha") != RES_OK &&
                     peca_buscar_por_id(db, ssd_id, &peca) == RES_OK &&
                     peca.quantidade == 4,
-                    "rollback restaura estoque após erro no movimento");
+                    "rollback restaura estoque apos erro no movimento");
     codigo = sqlite3_exec(db, "DROP TRIGGER falha_saida;", NULL, NULL, NULL);
     TESTE_VERIFICAR(codigo == SQLITE_OK, "remover trigger de falha");
     TESTE_VERIFICAR(peca_registrar_saida(db, ssd_id, 1, "Saída final") ==
                         RES_OK,
-                    "saída funciona após rollback");
+                    "saida funciona apos rollback");
 }
 
 static void testar_persistencia(sqlite3 **db, int ssd_id)
@@ -300,16 +300,16 @@ static void testar_persistencia(sqlite3 **db, int ssd_id)
     db_fechar(*db);
     *db = NULL;
     TESTE_VERIFICAR(db_abrir(db, CAMINHO_BANCO) == RES_OK,
-                    "reabrir banco de peças");
+                    "reabrir banco de pecas");
     TESTE_VERIFICAR(peca_buscar_por_id(*db, ssd_id, &peca) == RES_OK &&
                     peca.quantidade == 3 &&
                     strcmp(peca.codigo, "SSD480") == 0,
-                    "peça e quantidade persistem");
+                    "peca e quantidade persistem");
     TESTE_VERIFICAR(estoque_listar_movimentacoes(*db, ssd_id, &lista,
                                                   &quantidade) == RES_OK &&
                     quantidade == 6 &&
                     strcmp(lista[5].motivo, "Saída final") == 0,
-                    "movimentações persistem");
+                    "movimentacoes persistem");
     free(lista);
 }
 
@@ -325,7 +325,7 @@ int main(void)
         return teste_codigo_saida();
     }
     if (db_abrir(&db, CAMINHO_BANCO) != RES_OK) {
-        TESTE_VERIFICAR(0, "abrir banco de peças");
+        TESTE_VERIFICAR(0, "abrir banco de pecas");
         return teste_codigo_saida();
     }
     testar_cadastro(db, &ssd_id, &zero_id, &mouse_id);

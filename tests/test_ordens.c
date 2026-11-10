@@ -50,16 +50,16 @@ static void testar_status(void)
 
     for (i = 0; i < OS_STATUS_TOTAL; i++) {
         TESTE_VERIFICAR(strcmp(os_status_codigo((StatusOS)i), codigos[i]) == 0,
-                        "código de situação");
+                        "codigo de situacao");
         TESTE_VERIFICAR(strcmp(os_status_rotulo((StatusOS)i), rotulos[i]) == 0,
-                        "rótulo de situação");
+                        "rotulo de situacao");
         TESTE_VERIFICAR(os_status_de_codigo(codigos[i]) == i,
-                        "converter código de situação");
+                        "converter codigo de situacao");
     }
     TESTE_VERIFICAR(os_status_de_codigo("EM_REPARO") == OS_EM_REPARO,
-                    "buscar código EM_REPARO");
+                    "buscar codigo EM_REPARO");
     TESTE_VERIFICAR(os_status_de_codigo("DESCONHECIDO") == -1,
-                    "rejeitar código de situação desconhecido");
+                    "rejeitar codigo de situacao desconhecido");
 }
 
 static int contar_tabela(sqlite3 *db, const char *tabela)
@@ -103,7 +103,7 @@ static void testar_historico_vazio(sqlite3 *db, int ordem_id)
                                                        &quantidade);
 
     TESTE_VERIFICAR(resultado == RES_OK && quantidade == 0 && lista == NULL,
-                    "listar histórico vazio");
+                    "listar historico vazio");
     free(lista);
 }
 
@@ -119,22 +119,22 @@ static void testar_falhas_sem_meio_registro(sqlite3 *db, int equipamento_id,
                     "rejeitar equipamento inexistente");
     TESTE_VERIFICAR(contar_tabela(db, "ordens_servico") == ordens_antes &&
                     contar_tabela(db, "historico_ordens") == eventos_antes,
-                    "falha de equipamento não grava parcialmente");
+                    "falha de equipamento nao grava parcialmente");
     TESTE_VERIFICAR(ordem_abrir(db, equipamento_id, 999999, "Problema",
                                 &id_novo) == RES_NAO_ENCONTRADO,
-                    "rejeitar técnico inexistente");
+                    "rejeitar tecnico inexistente");
     TESTE_VERIFICAR(contar_tabela(db, "ordens_servico") == ordens_antes &&
                     contar_tabela(db, "historico_ordens") == eventos_antes,
-                    "falha de técnico não grava parcialmente");
+                    "falha de tecnico nao grava parcialmente");
     TESTE_VERIFICAR(ordem_abrir(db, equipamento_id, 0, "", &id_novo) ==
                         RES_INVALIDO,
-                    "rejeitar descrição vazia");
+                    "rejeitar descricao vazia");
     TESTE_VERIFICAR(contar_tabela(db, "ordens_servico") == ordens_antes &&
                     contar_tabela(db, "historico_ordens") == eventos_antes,
-                    "descrição inválida não grava parcialmente");
+                    "descricao invalida nao grava parcialmente");
     TESTE_VERIFICAR(ordem_buscar_por_id(db, ordem_id, &(OrdemServico){0}) ==
                         RES_OK,
-                    "OS inicial permanece disponível");
+                    "OS inicial permanece disponivel");
 }
 
 static void testar_historico_dois_eventos(sqlite3 *db, int ordem_id)
@@ -145,12 +145,12 @@ static void testar_historico_dois_eventos(sqlite3 *db, int ordem_id)
                                                        &quantidade);
 
     TESTE_VERIFICAR(resultado == RES_OK && quantidade == 2,
-                    "ordem com técnico tem dois eventos");
+                    "ordem com tecnico tem dois eventos");
     if (resultado == RES_OK && quantidade == 2) {
         TESTE_VERIFICAR(strcmp(lista[0].tipo_evento, "ABERTURA") == 0,
-                        "primeiro evento é abertura");
+                        "primeiro evento e abertura");
         TESTE_VERIFICAR(strcmp(lista[1].tipo_evento, "TECNICO") == 0,
-                        "segundo evento é técnico");
+                        "segundo evento e tecnico");
     }
     free(lista);
 }
@@ -178,10 +178,10 @@ static void testar_listagens(sqlite3 *db, int id_sem_evento,
     lista = NULL;
     resultado = ordem_listar(db, "ENTREGUE", &lista, &quantidade);
     TESTE_VERIFICAR(resultado == RES_OK && quantidade == 0 && lista == NULL,
-                    "listar situação válida sem ordens");
+                    "listar situacao valida sem ordens");
     TESTE_VERIFICAR(ordem_listar(db, "INVALIDO", &lista, &quantidade) ==
                         RES_INVALIDO,
-                    "rejeitar situação desconhecida");
+                    "rejeitar situacao desconhecida");
     free(lista);
 }
 
@@ -199,15 +199,15 @@ static int preparar_banco(sqlite3 **db, int *equipamento_id, int *tecnico_id,
         if (resultado != RES_OK) return 0;
     }
     if (!criar_dados(*db, equipamento_id, tecnico_id)) {
-        TESTE_VERIFICAR(0, "criar cliente, equipamento e técnico");
+        TESTE_VERIFICAR(0, "criar cliente, equipamento e tecnico");
         return 0;
     }
-    TESTE_VERIFICAR(1, "criar cliente, equipamento e técnico");
+    TESTE_VERIFICAR(1, "criar cliente, equipamento e tecnico");
     if (!criar_os_sem_historico(*db, *equipamento_id, ordem_vazia)) {
-        TESTE_VERIFICAR(0, "criar OS sem histórico");
+        TESTE_VERIFICAR(0, "criar OS sem historico");
         return 0;
     }
-    TESTE_VERIFICAR(1, "criar OS sem histórico");
+    TESTE_VERIFICAR(1, "criar OS sem historico");
     testar_historico_vazio(*db, *ordem_vazia);
     return 1;
 }
@@ -222,7 +222,7 @@ static void testar_ordem_sem_tecnico(sqlite3 *db, int equipamento_id,
                                       ordem_id);
 
     TESTE_VERIFICAR(resultado == RES_OK && *ordem_id > 0,
-                    "abrir ordem sem técnico");
+                    "abrir ordem sem tecnico");
     resultado = ordem_buscar_por_id(db, *ordem_id, &ordem);
     TESTE_VERIFICAR(resultado == RES_OK &&
                     strcmp(ordem.status, "ABERTA") == 0 &&
@@ -247,7 +247,7 @@ static void testar_ordem_com_tecnico(sqlite3 *db, int equipamento_id,
                                       "Tela quebrada", ordem_id);
 
     TESTE_VERIFICAR(resultado == RES_OK && *ordem_id > 0,
-                    "abrir ordem com técnico");
+                    "abrir ordem com tecnico");
     testar_historico_dois_eventos(db, *ordem_id);
 }
 
@@ -262,10 +262,10 @@ static void testar_regras_de_ordem(sqlite3 *db, int equipamento_id,
                     "buscar ordem inexistente");
     TESTE_VERIFICAR(historico_registrar(db, id_ordem, "INVALIDO", NULL, NULL,
                                         NULL) == RES_INVALIDO,
-                    "rejeitar tipo de histórico desconhecido");
+                    "rejeitar tipo de historico desconhecido");
     TESTE_VERIFICAR(historico_registrar(db, 999999, "STATUS", NULL, NULL,
                                         NULL) == RES_INVALIDO,
-                    "rejeitar histórico de ordem inexistente");
+                    "rejeitar historico de ordem inexistente");
 }
 
 static void testar_rollback_na_transacao(sqlite3 *db, int equipamento_id,
@@ -293,7 +293,7 @@ static void testar_rollback_na_transacao(sqlite3 *db, int equipamento_id,
     if (codigo != SQLITE_OK) return;
     TESTE_VERIFICAR(ordem_abrir(db, equipamento_id, tecnico_id,
                                 "Após rollback", ordem_id) == RES_OK,
-                    "nova abertura funciona após rollback");
+                    "nova abertura funciona apos rollback");
 }
 
 static void testar_persistencia(sqlite3 **db, int ordem_id)
@@ -310,11 +310,11 @@ static void testar_persistencia(sqlite3 **db, int ordem_id)
     if (resultado != RES_OK) return;
     TESTE_VERIFICAR(ordem_buscar_por_id(*db, ordem_id, &ordem) == RES_OK &&
                     strcmp(ordem.status, "ABERTA") == 0,
-                    "ordem persiste após reabrir");
+                    "ordem persiste apos reabrir");
     resultado = historico_listar_por_ordem(*db, ordem_id, &eventos,
                                             &quantidade);
     TESTE_VERIFICAR(resultado == RES_OK && quantidade == 1,
-                    "histórico persiste após reabrir");
+                    "historico persiste apos reabrir");
     free(eventos);
 }
 

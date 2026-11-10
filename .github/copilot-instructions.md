@@ -12,6 +12,7 @@ Projeto acadêmico (PIM IV, UNIP): sistema de ordens de serviço da empresa fict
 
 - Módulo = src/<nome>.c + include/<nome>.h (com include guard). main.c só controla o menu principal.
 - Arquivos, funções e variáveis em português, snake_case, sem acento. Comentários em português, só onde ajudam. Textos exibidos ao usuário em português, com acento.
+- Descrições de teste (TESTE_VERIFICAR) sem acentos.
 - Funções curtas, com uma responsabilidade (de preferência menos de 40 linhas). Funções de banco (testáveis, sem printf/scanf) separadas das funções de menu.
 - Funções de dados retornam o enum Resultado (include/resultado.h) e devolvem dados por parâmetros de ponteiro.
 - Compilar sem warnings com -std=c11 -Wall -Wextra -Wpedantic.

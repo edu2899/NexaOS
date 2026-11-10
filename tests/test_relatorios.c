@@ -125,10 +125,10 @@ static void testar_resumo(sqlite3 *db)
                     resumo.por_status[OS_ENTREGUE] == 1 &&
                     resumo.por_status[OS_CANCELADA] == 1 &&
                     resumo.por_status[OS_EM_REPARO] == 1,
-                    "contagem por situação");
+                    "contagem por situacao");
     for (i = 0; i < OS_STATUS_TOTAL; i++) soma += resumo.por_status[i];
     TESTE_VERIFICAR(soma == resumo.total,
-                    "soma por situação equivale ao total");
+                    "soma por situacao equivale ao total");
 }
 
 static int matriz_2026_correta(int matriz[12][OS_STATUS_TOTAL])
@@ -177,14 +177,14 @@ static void testar_matriz_2026(sqlite3 *db)
                     matriz[2][OS_CONCLUIDA] == 1 &&
                     matriz[2][OS_ENTREGUE] == 1 &&
                     matriz[2][OS_CANCELADA] == 1,
-                    "contagens mensais e situação corretas em 2026");
+                    "contagens mensais e situacao corretas em 2026");
     TESTE_VERIFICAR(relatorio_total_mes(matriz, 1) == 2 &&
                     relatorio_total_mes(matriz, 2) == 1 &&
                     relatorio_total_mes(matriz, 3) == 3 &&
                     relatorio_total_status(matriz, OS_ABERTA) == 2,
-                    "totais mensais e por situação");
+                    "totais mensais e por situacao");
     TESTE_VERIFICAR(matriz_2026_correta(matriz),
-                    "demais células de 2026 são zero");
+                    "demais celulas de 2026 sao zero");
     for (mes = 0; mes < 12; mes++) {
         for (status = 0; status < OS_STATUS_TOTAL; status++) {
             total += matriz[mes][status];
@@ -193,7 +193,7 @@ static void testar_matriz_2026(sqlite3 *db)
     TESTE_VERIFICAR(total == 6, "total de ordens em 2026");
     TESTE_VERIFICAR(relatorio_total_mes(matriz, 0) == 0 &&
                     relatorio_total_mes(matriz, 13) == 0,
-                    "rejeitar mês fora do intervalo");
+                    "rejeitar mes fora do intervalo");
 }
 
 static void testar_outros_anos(sqlite3 *db)
@@ -211,7 +211,7 @@ static void testar_outros_anos(sqlite3 *db)
     TESTE_VERIFICAR(relatorio_ordens_por_mes(db, 2024, matriz) == RES_OK,
                     "ano sem ordens retorna sucesso");
     TESTE_VERIFICAR(matriz_sem_ordens(matriz),
-                    "ano sem ordens tem células zeradas");
+                    "ano sem ordens tem celulas zeradas");
 }
 
 static void testar_zeramento_e_limites(sqlite3 *db)
@@ -250,11 +250,11 @@ int main(void)
         return teste_codigo_saida();
     }
     if (db_abrir(&db, CAMINHO_BANCO) != RES_OK) {
-        TESTE_VERIFICAR(0, "abrir banco de relatórios");
+        TESTE_VERIFICAR(0, "abrir banco de relatorios");
         return teste_codigo_saida();
     }
     TESTE_VERIFICAR(criar_dependencias(db, &equipamento_id, &tecnico_id),
-                    "criar cliente, equipamento e técnico");
+                    "criar cliente, equipamento e tecnico");
     testar_vazio(db);
     TESTE_VERIFICAR(criar_oito_ordens(db, equipamento_id),
                     "criar oito ordens com datas controladas");

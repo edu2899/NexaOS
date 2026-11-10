@@ -3,6 +3,7 @@
 #include "clientes.h"
 #include "equipamentos.h"
 #include "historico.h"
+#include "menu_itens_ordem.h"
 #include "ordens.h"
 #include "tecnicos.h"
 #include "util.h"
@@ -475,8 +476,9 @@ void menu_ordens(sqlite3 *db)
         puts("1 - Abrir ordem\n2 - Consultar por ID\n3 - Listar todas");
         puts("4 - Listar por situação\n5 - Consultar histórico");
         puts("6 - Atribuir técnico\n7 - Registrar diagnóstico");
-        puts("8 - Registrar observação\n9 - Atualizar situação\n0 - Voltar");
-        resultado = util_ler_inteiro("Escolha uma opção: ", 0, 9, &opcao);
+        puts("8 - Registrar observação\n9 - Atualizar situação");
+        puts("10 - Peças da ordem\n0 - Voltar");
+        resultado = util_ler_inteiro("Escolha uma opção: ", 0, 10, &opcao);
         if (resultado != RES_OK) {
             return;
         }
@@ -491,6 +493,7 @@ void menu_ordens(sqlite3 *db)
             case 7: ordem_diagnostico_tela(db); break;
             case 8: ordem_observacao_tela(db); break;
             case 9: ordem_status_atualizar_tela(db); break;
+            case 10: menu_itens_ordem(db); break;
             default: break;
         }
     }

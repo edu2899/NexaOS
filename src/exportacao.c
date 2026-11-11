@@ -19,8 +19,15 @@ static int csv_precisa_aspas(const char *texto)
 
 static int csv_tem_prefixo_formula(const char *texto)
 {
-    return texto[0] == '=' || texto[0] == '+' || texto[0] == '-' ||
-           texto[0] == '@' || texto[0] == '\t' || texto[0] == '\r';
+    const char *inicio = texto;
+
+    if (texto[0] == '\t' || texto[0] == '\r') return 1;
+    while (*inicio == ' ' || *inicio == '\t' || *inicio == '\r' ||
+           *inicio == '\n') {
+        inicio++;
+    }
+    return *inicio == '=' || *inicio == '+' || *inicio == '-' ||
+           *inicio == '@';
 }
 
 static int csv_escrever_texto(FILE *arquivo, const char *texto)

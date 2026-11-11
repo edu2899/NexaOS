@@ -290,10 +290,48 @@ static int ajustar_quantidade(sqlite3 *db, int peca_id, int quantidade)
     return codigo == SQLITE_DONE;
 }
 
+static int criar_pecas_neutralizacao(sqlite3 *db, int ids[6])
+{
+    static const char *const codigos[6] = {
+        "ESPACO", "ARROBA", "LINHA", "TAB", "NORMAL", "EQUAL"
+    };
+    static const char *const nomes[6] = {
+        " =1+1", "  @cmd", "\n=1+1", "\t-x", "texto normal", "a=b"
+    };
+    int i;
+
+    for (i = 0; i < 6; i++) {
+        if (!criar_peca(db, codigos[i], nomes[i], 0, 1, &ids[i])) return 0;
+    }
+    return 1;
+}
+
+static int elevar_estoque_pecas(sqlite3 *db, const int ids[6])
+{
+    int i;
+
+    for (i = 0; i < 6; i++) {
+        if (!ajustar_quantidade(db, ids[i], 2)) return 0;
+    }
+    return 1;
+}
+
 static void testar_estoque_baixo(sqlite3 *db, int peca_id)
 {
+    static const char esperado[] =
+        "Codigo;Nome;Quantidade;Minimo\r\n"
+        "ARROBA;'  @cmd;0;1\r\n"
+        "EQUAL;a=b;0;1\r\n"
+        "ESPACO;' =1+1;0;1\r\n"
+        "FORMULA;'=SOMA(A1);0;1\r\n"
+        "HDMI;\"Cabo \"\"HDMI\"\"; 2m\";2;3\r\n"
+        "LINHA;\"'\n=1+1\";0;1\r\n"
+        "MENOS;'-teste;0;1\r\n"
+        "NORMAL;texto normal;0;1\r\n"
+        "TAB;'\t-x;0;1\r\n";
     char *conteudo;
     size_t tamanho = 0;
+    int ids[6];
     int formula_id;
     int menos_id;
 
@@ -301,6 +339,8 @@ static void testar_estoque_baixo(sqlite3 *db, int peca_id)
                                &formula_id) &&
                     criar_peca(db, "MENOS", "-teste", 0, 1, &menos_id),
                     "criar pecas para testar formulas");
+    TESTE_VERIFICAR(criar_pecas_neutralizacao(db, ids),
+        "criar campos para verificar neutralizacao");
     TESTE_VERIFICAR(ajustar_quantidade(db, peca_id, 2) &&
                     exportar_estoque_baixo(db, CSV_ESTOQUE) == RES_OK,
                     "exportar pecas com estoque baixo");
@@ -308,10 +348,10 @@ static void testar_estoque_baixo(sqlite3 *db, int peca_id)
     TESTE_VERIFICAR(conteudo != NULL &&
                     strstr(conteudo, "\"Cabo \"\"HDMI\"\"; 2m\"") != NULL,
                     "escapar aspas e separador no nome");
-    TESTE_VERIFICAR(conteudo != NULL &&
-                    strstr(conteudo, "'=SOMA(A1)") != NULL &&
-                    strstr(conteudo, "'-teste") != NULL,
-                    "neutralizar formulas em texto");
+    TESTE_VERIFICAR(conteudo != NULL && tamanho >= 3 &&
+                    memcmp(conteudo, "\xEF\xBB\xBF", 3) == 0 &&
+                    strcmp(conteudo + 3, esperado) == 0,
+                    "neutralizar formulas e preservar texto e quebras");
     free(conteudo);
     TESTE_VERIFICAR(ajustar_quantidade(db, peca_id, -1),
                     "preparar numero negativo somente no teste");
@@ -325,7 +365,8 @@ static void testar_estoque_baixo(sqlite3 *db, int peca_id)
     TESTE_VERIFICAR(ajustar_quantidade(db, peca_id, 10),
                     "restaurar estoque de teste");
     TESTE_VERIFICAR(peca_registrar_entrada(db, formula_id, 2, NULL) == RES_OK &&
-                    peca_registrar_entrada(db, menos_id, 2, NULL) == RES_OK,
+                    peca_registrar_entrada(db, menos_id, 2, NULL) == RES_OK &&
+                    elevar_estoque_pecas(db, ids),
                     "deixar todas as pecas acima do minimo");
     TESTE_VERIFICAR(exportar_estoque_baixo(db, CSV_VAZIO) == RES_OK,
                     "exportar estoque baixo vazio");

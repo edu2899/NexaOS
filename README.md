@@ -117,7 +117,8 @@ execute `Iniciar_NexaOS.bat`. O banco será criado em `data\nexaos.db`.
 - **Relatórios:** resumo e ordens por mês, peças com estoque baixo e
   movimentações.
 - **Exportação CSV:** relatórios e movimentações em arquivos separados por
-  ponto e vírgula, na pasta `exports`.
+  ponto e vírgula, na pasta `exports`; campos de texto com possível fórmula são
+  neutralizados com apóstrofo.
 
 ## Instruções de utilização
 
@@ -259,7 +260,7 @@ sem erro antes de consultar as tabelas.
 ## Testes realizados
 
 `build.bat test` compila e executa 12 arquivos de teste. Na última execução:
-**405 verificações passaram**, incluindo 12 verificações finais de memória, uma
+**406 verificações passaram**, incluindo 12 verificações finais de memória, uma
 por executável; não houve falhas e o resultado foi `TESTES OK`.
 
 | Arquivo                      | Cobertura principal                                                                  |

@@ -3,6 +3,13 @@
 Sistema de terminal para registrar ordens de serviço de uma empresa fictícia de assistência técnica.
 Desenvolvido em C11 para Windows, com persistência local em SQLite.
 
+## Demonstração
+
+![Demonstração do NexaOS](docs/imagens/demo.gif)
+
+![Menu principal](docs/imagens/menu.png)
+![Relatório de ordens por mês](docs/imagens/relatorio.png)
+
 ## Início rápido
 
 No PowerShell, na pasta raiz do repositório:

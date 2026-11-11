@@ -92,6 +92,11 @@ Compila e inicia o aplicativo. O banco de dados da aplicação fica em
 Compila e executa cada arquivo `tests\test_*.c`. A execução termina com
 `TESTES OK` se todos os testes passarem.
 
+## Executável pronto (Windows)
+
+Na aba **Releases** do GitHub, baixe `NexaOS_v1.0.zip`, extraia a pasta e
+execute `Iniciar_NexaOS.bat`. O banco será criado em `data\nexaos.db`.
+
 ## Funcionalidades
 
 - **Clientes:** cadastro, consulta, atualização e listagem.
@@ -250,20 +255,20 @@ sem erro antes de consultar as tabelas.
 **405 verificações passaram**, incluindo 12 verificações finais de memória, uma
 por executável; não houve falhas e o resultado foi `TESTES OK`.
 
-| Arquivo | Cobertura principal |
-|---|---|
-| `tests/test_clientes.c` | Cadastro, validação, consulta, atualização, listagem e persistência de clientes. |
-| `tests/test_dados_exemplo.c` | Carga de dados de exemplo, contagens, chaves estrangeiras, saldos e relatórios. |
-| `tests/test_db.c` | Esquema, chaves estrangeiras, restrições, erros SQLite e persistência. |
-| `tests/test_equipamentos.c` | Cadastro, validação, consulta e listagem de equipamentos. |
-| `tests/test_exportacao.c` | Cabeçalhos, linhas, codificação, escaping, neutralização de fórmulas e erros de CSV. |
-| `tests/test_itens_ordem.c` | Uso de peças, regras de situação, transações, histórico e estoque. |
-| `tests/test_ordens.c` | Abertura, busca, listagem, histórico e alterações de ordem. |
-| `tests/test_ordens_fluxo.c` | Transições, regras de negócio, rollback e fluxo completo da ordem. |
-| `tests/test_pecas.c` | Cadastro, estoque, movimentações, validações, rollback e persistência de peças. |
-| `tests/test_relatorios.c` | Resumo, matriz mensal, totais e ano atual. |
-| `tests/test_tecnicos.c` | Cadastro, validação, consulta e listagem de técnicos. |
-| `tests/test_validacao.c` | Utilitários, validações, formatação e leitura de entradas. |
+| Arquivo                      | Cobertura principal                                                                  |
+| ---------------------------- | ------------------------------------------------------------------------------------ |
+| `tests/test_clientes.c`      | Cadastro, validação, consulta, atualização, listagem e persistência de clientes.     |
+| `tests/test_dados_exemplo.c` | Carga de dados de exemplo, contagens, chaves estrangeiras, saldos e relatórios.      |
+| `tests/test_db.c`            | Esquema, chaves estrangeiras, restrições, erros SQLite e persistência.               |
+| `tests/test_equipamentos.c`  | Cadastro, validação, consulta e listagem de equipamentos.                            |
+| `tests/test_exportacao.c`    | Cabeçalhos, linhas, codificação, escaping, neutralização de fórmulas e erros de CSV. |
+| `tests/test_itens_ordem.c`   | Uso de peças, regras de situação, transações, histórico e estoque.                   |
+| `tests/test_ordens.c`        | Abertura, busca, listagem, histórico e alterações de ordem.                          |
+| `tests/test_ordens_fluxo.c`  | Transições, regras de negócio, rollback e fluxo completo da ordem.                   |
+| `tests/test_pecas.c`         | Cadastro, estoque, movimentações, validações, rollback e persistência de peças.      |
+| `tests/test_relatorios.c`    | Resumo, matriz mensal, totais e ano atual.                                           |
+| `tests/test_tecnicos.c`      | Cadastro, validação, consulta e listagem de técnicos.                                |
+| `tests/test_validacao.c`     | Utilitários, validações, formatação e leitura de entradas.                           |
 
 `tests/vazamento.c` envolve as funções de alocação no linker. O helper
 `tests/test_util.h` verifica se restaram blocos alocados ao final de cada teste.
@@ -302,7 +307,7 @@ por executável; não houve falhas e o resultado foi `TESTES OK`.
 
 ## Autor e contexto
 
-Autor: [preencher]  
-Projeto acadêmico PIM IV, UNIP.  
-Curso de Análise e Desenvolvimento de Sistemas.  
+Autor: Eduardo Romano
+Projeto acadêmico PIM IV, UNIP.
+Curso de Análise e Desenvolvimento de Sistemas.
 Empresa fictícia: NexaFix.

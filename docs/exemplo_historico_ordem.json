@@ -1,0 +1,104 @@
+{
+  "_id": "ordem-42",
+  "ordem": {
+    "id": 42,
+    "data_abertura": "2026-04-14T12:00:00-03:00",
+    "status_atual": "EM_REPARO",
+    "descricao_problema": "Notebook está lento."
+  },
+  "cliente": {
+    "id": 7,
+    "nome": "Lia Martins",
+    "documento": "11122233307"
+  },
+  "equipamento": {
+    "id": 12,
+    "tipo": "NOTEBOOK",
+    "marca": "Nexa",
+    "modelo": "Book 14",
+    "numero_serie": "DEMO-NB-042"
+  },
+  "tecnico": {
+    "id": 3,
+    "nome": "Paulo Mendes",
+    "especialidade": "Notebooks"
+  },
+  "eventos": [
+    {
+      "tipo": "ABERTURA",
+      "data_hora": "2026-04-14T12:00:00-03:00",
+      "descricao": "OS aberta."
+    },
+    {
+      "tipo": "TECNICO",
+      "data_hora": "2026-04-14T12:05:00-03:00",
+      "tecnico_id": 3,
+      "descricao": "Técnico atribuído à ordem."
+    },
+    {
+      "tipo": "STATUS",
+      "data_hora": "2026-04-14T12:10:00-03:00",
+      "status_anterior": "ABERTA",
+      "status_novo": "EM_DIAGNOSTICO"
+    },
+    {
+      "tipo": "DIAGNOSTICO",
+      "data_hora": "2026-04-14T12:30:00-03:00",
+      "descricao": "Memória insuficiente para a carga de trabalho."
+    },
+    {
+      "tipo": "TESTE",
+      "data_hora": "2026-04-14T12:40:00-03:00",
+      "nome": "Verificação de memória",
+      "resultado": "FALHOU",
+      "medicoes": {
+        "memoria_instalada_gb": 4,
+        "uso_em_reposo_percentual": 87
+      }
+    },
+    {
+      "tipo": "OBSERVACAO",
+      "data_hora": "2026-04-14T12:50:00-03:00",
+      "texto": "Cliente autorizou a substituição da memória.",
+      "anexos": [
+        {
+          "nome": "diagnostico.pdf",
+          "categoria": "laudo"
+        }
+      ]
+    },
+    {
+      "tipo": "STATUS",
+      "data_hora": "2026-04-14T13:00:00-03:00",
+      "status_anterior": "EM_DIAGNOSTICO",
+      "status_novo": "AGUARDANDO_APROVACAO"
+    },
+    {
+      "tipo": "STATUS",
+      "data_hora": "2026-04-14T13:15:00-03:00",
+      "status_anterior": "AGUARDANDO_APROVACAO",
+      "status_novo": "APROVADA"
+    },
+    {
+      "tipo": "STATUS",
+      "data_hora": "2026-04-14T13:20:00-03:00",
+      "status_anterior": "APROVADA",
+      "status_novo": "EM_REPARO"
+    },
+    {
+      "tipo": "PECA",
+      "data_hora": "2026-04-14T13:30:00-03:00",
+      "codigo": "MEM8",
+      "nome": "Memória 8 GB",
+      "quantidade": 1,
+      "resultado_teste": "Substituição concluída."
+    },
+    {
+      "tipo": "TESTE",
+      "data_hora": "2026-04-14T13:45:00-03:00",
+      "nome": "Verificação de inicialização",
+      "resultado": "APROVADO",
+      "duracao_segundos": 42
+    }
+  ]
+}
